@@ -73,3 +73,10 @@ class Perceptron:
 
     def forward(self, input_signal: Vector) -> float:
         return self.f_activation(self.weighted_sum(input_signal))
+
+    def __repr__(self):
+        return (
+            f"Perceptron(inputs={len(self.weights)}, "
+            f"bias={self.bias:.4f}, "
+            f"activation={self.f_activation.__name__})"
+        )

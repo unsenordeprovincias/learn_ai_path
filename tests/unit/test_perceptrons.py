@@ -43,3 +43,15 @@ def test_str_perceptron(perceptron):
     )
     assert repr(perceptron) == expected
 
+def test_correct_perceptron(perceptron):
+    delta_weights = Vector([1, -1, 0, 0, 0, 0, 0])
+    delta_bias = -0.5
+
+    expected_weights = delta_weights + perceptron.weights
+    expected_bias = delta_bias + perceptron.bias
+
+    perceptron.correct(delta_weights, delta_bias)
+
+    assert perceptron.bias == expected_bias
+    assert perceptron.weights == expected_weights
+

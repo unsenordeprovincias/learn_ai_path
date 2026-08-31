@@ -1,5 +1,5 @@
-from collections.abc import Iterable
-from random import random
+from collections.abc import Iterable, Callable
+from random import uniform, random
 
 class Vector:
     def __init__(self, values: Iterable[float]):
@@ -14,7 +14,7 @@ class Vector:
 
     @classmethod
     def initialize(cls, length:int):
-        values = [random() for _ in range(length)]
+        values = [uniform(-1, 1) for _ in range(length)]
         return cls(values)
 
     @property
@@ -62,4 +62,8 @@ class Vector:
     def __repr__(self):
         return f"Vector {self.values}"
 
-    
+class Perceptron:
+    def __init__(self, length: int, fActivation: Callable[[float], float]):
+        self.weights = Vector.initialize(length)
+        self.bias = random()
+        self.f_activation = fActivation

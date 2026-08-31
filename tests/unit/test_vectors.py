@@ -74,7 +74,6 @@ def test_size_error_matmul_vectors():
     assert "with shapes (2,) (3,)" in str(exc_info.value)
 
 
-
 def test_str_vector():
     v1 = Vector.from_values(*range(3))
     assert str(v1) == "Vector (0, 1, 2)"
@@ -83,7 +82,7 @@ def test_str_vector():
 def test_initialize_vector():
     random.seed(7)
     n = 5
-    values = [random.random() for i in range (n)]
+    values = [random.uniform(-1, 1) for i in range (n)]
 
     random.seed(7)
     v = Vector.initialize(n)

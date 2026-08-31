@@ -71,7 +71,7 @@ class Perceptron:
     def weighted_sum(self, input_signal: Vector) -> float:
         return self.weights @ input_signal + self.bias
 
-    def forward(self, input_signal: Vector) -> float:
+    def output(self, input_signal: Vector) -> float:
         return self.f_activation(self.weighted_sum(input_signal))
 
     def correct(self, delta_weights: Vector, delta_bias: float):

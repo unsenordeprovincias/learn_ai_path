@@ -28,12 +28,12 @@ def test_ponderated_sum(perceptron):
 
     assert weighted_sum == sum(init_values) + init_bias
 
-def test_forward(perceptron):
+def test_output(perceptron):
     input_signal = Vector([1] * PARAMS)
     weighted_sum = perceptron.weighted_sum(input_signal)
     output_signal = 0 if weighted_sum < 0 else weighted_sum
 
-    assert output_signal == perceptron.forward(input_signal)
+    assert output_signal == perceptron.output(input_signal)
 
 def test_str_perceptron(perceptron):
     expected = (

@@ -26,9 +26,12 @@ Ya disponibles en el dominio (`src/mnist/domain/models.py`):
 
 - `Vector`: suma, producto escalar, producto vectorial (`@`), inicialización
   aleatoria (`Vector.initialize`).
-- `Perceptron`: pesos + bias inicializados al azar, `weighted_sum`, `forward`
+- `Perceptron`: pesos + bias inicializados al azar, `weighted_sum`, `output`
   (aplica la función de activación) y `correct` (ajusta pesos y bias con un
   delta).
+- `Layer`: agrupa varios `Perceptron` (mismo nº de entradas, misma función de
+  activación por defecto) y expone su propio `output`, que devuelve un
+  `Vector` con la salida de cada perceptrón de la capa.
 
 Este playground es un consumidor de ese dominio, no debería necesitar
 modificarlo salvo que se descubra que falta algo imprescindible.
@@ -62,6 +65,44 @@ Capa salida:
 
 Es decir, XOR = OR AND NOT(AND) — la capa oculta calcula esas dos señales por
 separado y la capa de salida las combina.
+
+#### Solución implementada
+
+En `playgrounds/xor/__init__.py`, la red son dos `Layer` (2 entradas → 2
+perceptrones la oculta, 2 entradas → 1 perceptrón la de salida), con los
+pesos y bias de la tabla anterior asignados a mano tras crearlas. `layer1` y
+`layer2` son variables de módulo: se construyen una sola vez, al importar el
+módulo, y `XOR` es una función normal que las reutiliza en cada llamada:
+
+```python
+layer1 = Layer(2, 2, _step)
+layer1[0].weights = Vector([1, 1])
+...
+
+def XOR(x1: int, x2: int) -> float:
+    v = layer1.output(Vector([x1, x2]))
+    r = layer2.output(v)
+    return r[0]
+```
+
+Esto ya satisface tal cual el test que se escribió primero
+(`tests/playgrounds/xor/test_xor.py`), que llama a `XOR(1, 1)` directamente
+como si fuera una función:
+
+```python
+from playgrounds.xor import XOR
+
+def test_XOR():
+    assert XOR(1, 1) == 0
+    ...
+```
+
+La primera versión de esta solución resolvía lo mismo con una clase y una
+metaclase (`XOR` como clase "no instanciable" cuya llamada, vía
+`metaclass.__call__`, ejecutaba la red). Funcionaba, pero era más maquinaria
+de la que el problema pedía: el módulo ya es un singleton en Python, así que
+no hace falta fingir uno con una clase para conseguir "construir la red una
+sola vez". Se descartó a favor de esta versión más simple.
 
 Pero ¿qué sentido tiene esto? AND, OR y XOR ya sabemos calcularlos a mano.
 Es una buena simulación de neuronas, pero ¿qué aporta? Si en lugar de pesos y

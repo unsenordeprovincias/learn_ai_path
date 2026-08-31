@@ -1,5 +1,6 @@
 from mnist.domain.models import Vector
 import pytest
+import random
 
 def test_create_vector():
     v = Vector([1, 2, 3])
@@ -77,3 +78,14 @@ def test_size_error_matmul_vectors():
 def test_str_vector():
     v1 = Vector.from_values(*range(3))
     assert str(v1) == "Vector (0, 1, 2)"
+
+
+def test_initialize_vector():
+    random.seed(7)
+    n = 5
+    values = [random.random() for i in range (n)]
+
+    random.seed(7)
+    v = Vector.initialize(n)
+    for value, component in zip(values, v.values):
+        assert component == value

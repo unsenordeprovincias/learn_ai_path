@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-
+from random import random
 
 class Vector:
     def __init__(self, values: Iterable[float]):
@@ -10,6 +10,11 @@ class Vector:
 
     @classmethod
     def from_values(cls, *values):
+        return cls(values)
+
+    @classmethod
+    def initialize(cls, length:int):
+        values = [random() for _ in range(length)]
         return cls(values)
 
     @property

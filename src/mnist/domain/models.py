@@ -86,8 +86,14 @@ class Perceptron:
         )
 
 class Layer:
-    def __init__(self, inputs: int, output: int):
-        self.perceptrons = [Perceptron(inputs, lambda x: 0 if x < 0 else x) for _ in range(output)]
+    def __init__(self, inputs: int, output: int, fActivation: Callable = None):
+        f = (lambda x: 0 if x < 0 else x) if fActivation is None else fActivation
+
+        self.perceptrons = [Perceptron(inputs, f) for _ in range(output)]
+
+    def output(self, _input: Vector) -> Vector:
+        result = [perceptron.output(_input) for perceptron in self.perceptrons]
+        return Vector(result)
 
     def __len__(self):
         return len(self.perceptrons)

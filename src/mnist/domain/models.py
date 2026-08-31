@@ -67,3 +67,6 @@ class Perceptron:
         self.weights = Vector.initialize(length)
         self.bias = random()
         self.f_activation = fActivation
+
+    def weighted_sum(self, input_signal: Vector) -> float:
+        return self.weights @ input_signal + self.bias

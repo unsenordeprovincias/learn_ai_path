@@ -84,3 +84,14 @@ class Perceptron:
             f"bias={self.bias:.4f}, "
             f"activation={self.f_activation.__name__})"
         )
+
+class Layer:
+    def __init__(self, inputs: int, output: int):
+        self.perceptrons = [Perceptron(inputs, lambda x: 0 if x < 0 else x) for _ in range(output)]
+
+    def __len__(self):
+        return len(self.perceptrons)
+
+    def __getitem__(self, key: int):
+        return self.perceptrons[key]
+        

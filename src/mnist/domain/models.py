@@ -125,4 +125,9 @@ class NeuralNet:
     def layers(self):
         return self.__layers
 
-    
+    def forward(self, input: Vector) -> Vector:
+        for layer in self.layers:
+            res = layer.output(input)
+            input = res
+
+        return res

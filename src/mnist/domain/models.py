@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Callable
 from random import uniform, random
+from functools import reduce
 
 class Vector:
     def __init__(self, values: Iterable[float]):
@@ -100,4 +101,28 @@ class Layer:
 
     def __getitem__(self, key: int):
         return self.perceptrons[key]
+
         
+
+class NeuralNet:
+    def __init__(self, layers: list[Layer]):
+        self.__layers = layers
+        self.__num_perceptrons = 0
+
+    def __len__(self) -> int:
+        return len(self.__layers)        
+
+    def __getitem__(self, key: int) -> Layer:
+        return self.__layers[key]
+
+    @property
+    def num_perceptrons(self):
+        if not self.__num_perceptrons:
+            self.__num_perceptrons = reduce(lambda accum, item: accum + len(item), self.__layers, 0)
+        return self.__num_perceptrons
+
+    @property
+    def layers(self):
+        return self.__layers
+
+    

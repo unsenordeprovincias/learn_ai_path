@@ -1,4 +1,5 @@
 from mnist.domain.models import Perceptron, Vector
+from mnist.domain.functions import relu
 import random
 import pytest
 
@@ -6,12 +7,11 @@ random.seed(5)
 PARAMS = 7
 init_values = tuple([random.uniform(-1, 1) for _ in range(PARAMS)])
 init_bias = random.random()
-f = lambda x: 0 if x < 0 else x
 
 @pytest.fixture
 def perceptron():
     random.seed(5)
-    return Perceptron(PARAMS, f) 
+    return Perceptron(PARAMS, relu) 
 
 def test_create_perceptron(perceptron):
     weights = perceptron.weights
@@ -19,7 +19,7 @@ def test_create_perceptron(perceptron):
 
     assert weights.values == init_values
     assert bias == init_bias
-    assert perceptron.f_activation == f
+    assert perceptron.f_activation == relu
 
 def test_ponderated_sum(perceptron):
 
@@ -39,7 +39,7 @@ def test_str_perceptron(perceptron):
     expected = (
         f"Perceptron(inputs={PARAMS}, "
         f"bias={perceptron.bias:.4f}, "
-        f"activation={perceptron.f_activation.__name__})"
+        f"activation={perceptron.f_activation.__class__.__name__})"
     )
     assert repr(perceptron) == expected
 

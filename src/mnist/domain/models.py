@@ -10,6 +10,13 @@ class Vector:
         self.__values = tuple(values)
 
     @classmethod
+    def __class_getitem__(cls, args):
+        if not isinstance(args, tuple):
+            args = (args, )
+
+        return cls(args)  
+
+    @classmethod
     def from_values(cls, *values):
         return cls(values)
 
@@ -43,6 +50,17 @@ class Vector:
                 f"({len(self)},) ({len(other)},)"
         )
         return Vector(tuple(a + b for a, b in zip(self.values, other.values)))
+
+    def __sub__(self, other: "Vector"):
+        self.__is_correct_type(other, "-", Vector)
+        if len(self) != len(other):
+            raise ValueError(
+                f"operands could not be broadcast together with shapes "
+                f"({len(self)},) ({len(other)},)"
+        )
+        other =  other * -1
+        return Vector(tuple(a + b for a, b in zip(self.values, other.values)))
+
 
     def __mul__(self, other: int | float):
         self.__is_correct_type(other, "*", int, float)
@@ -83,7 +101,7 @@ class Perceptron:
         return (
             f"Perceptron(inputs={len(self.weights)}, "
             f"bias={self.bias:.4f}, "
-            f"activation={self.f_activation.__name__})"
+            f"activation={self.f_activation.__class__.__name__})"
         )
 
 class Layer:
@@ -103,11 +121,11 @@ class Layer:
         return self.perceptrons[key]
 
         
-
 class NeuralNet:
-    def __init__(self, layers: list[Layer]):
+    def __init__(self, layers: list[Layer], floss: Callable = None):
         self.__layers = layers
         self.__num_perceptrons = 0
+        self.__floss = floss
 
     def __len__(self) -> int:
         return len(self.__layers)        
@@ -124,6 +142,10 @@ class NeuralNet:
     @property
     def layers(self):
         return self.__layers
+
+    @property
+    def floss(self):
+        return self.__floss
 
     def forward(self, input: Vector) -> Vector:
         for layer in self.layers:

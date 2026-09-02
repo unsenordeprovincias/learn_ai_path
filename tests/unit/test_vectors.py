@@ -9,6 +9,15 @@ def test_create_vector():
     assert v[0] == 1
     assert isinstance(v.values, tuple)
 
+    #more pythonic
+    v1 = Vector[2, 4, 6]
+    assert isinstance(v1, Vector)
+    assert len(v1) == 3
+    assert v1[0] == 2
+    assert isinstance(v1.values, tuple)
+
+    assert v1 == Vector([2, 4, 6])
+
 def test_create_vector_from_values():
     v = Vector.from_values(1, 3, 2)
     assert isinstance(v, Vector)
@@ -40,6 +49,15 @@ def test_adding_vectors():
     v3 = v1 + v2
     assert isinstance(v3, Vector)
     assert v3 == Vector([2, 4, 6])
+
+def test_substracting_vectors():
+    v1 = Vector([1, 2, 3])
+    v2 = Vector.from_values(2, 4, 6)
+
+    v3 = v1 - v2
+    assert isinstance(v3, Vector)
+    assert v3 == Vector([-1, -2, -3])
+
 
 def test_size_error_adding_vectors():
     with pytest.raises(ValueError) as exc_info:

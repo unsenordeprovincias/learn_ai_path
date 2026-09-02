@@ -1,6 +1,5 @@
 from mnist.domain.models import Layer, NeuralNet, Vector
-
-relu = lambda x: 0 if x < 0 else x
+from mnist.domain.functions import relu
 
 
 def test_create_neural_net():

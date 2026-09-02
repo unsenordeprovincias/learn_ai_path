@@ -34,6 +34,10 @@ def test_output(perceptron):
     output_signal = 0 if weighted_sum < 0 else weighted_sum
 
     assert output_signal == perceptron.output(input_signal)
+    assert perceptron.cache.input_signal == input_signal
+    assert perceptron.cache.weighted_sum == weighted_sum
+    assert perceptron.cache.output_signal == output_signal
+
 
 def test_str_perceptron(perceptron):
     expected = (

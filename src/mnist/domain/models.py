@@ -1,6 +1,9 @@
 from collections.abc import Iterable, Callable
 from random import uniform, random
 from functools import reduce
+from dataclasses import dataclass
+
+
 
 class Vector:
     def __init__(self, values: Iterable[float]):
@@ -81,17 +84,27 @@ class Vector:
     def __repr__(self):
         return f"Vector {self.values}"
 
+@dataclass
+class Cache:
+    input_signal: Vector
+    output_signal: Vector
+    weighted_sum: float
+
 class Perceptron:
     def __init__(self, length: int, fActivation: Callable[[float], float]):
         self.weights = Vector.initialize(length)
         self.bias = random()
         self.f_activation = fActivation
+        self.cache = None
 
     def weighted_sum(self, input_signal: Vector) -> float:
         return self.weights @ input_signal + self.bias
 
     def output(self, input_signal: Vector) -> float:
-        return self.f_activation(self.weighted_sum(input_signal))
+        weighted_sum = self.weighted_sum(input_signal) 
+        output_signal = self.f_activation(weighted_sum)
+        self.cache = Cache(input_signal, output_signal, weighted_sum)
+        return output_signal
 
     def correct(self, delta_weights: Vector, delta_bias: float):
         self.weights += delta_weights

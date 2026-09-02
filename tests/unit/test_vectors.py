@@ -91,6 +91,22 @@ def test_size_error_matmul_vectors():
         Vector([1, 2]) @ Vector([1, 2, 3])
     assert "with shapes (2,) (3,)" in str(exc_info.value)
 
+def test_hadamard_product_vectors():
+    v1 = Vector([1, 2, 3])
+    v2 = Vector([4, 5, 6])
+
+    v3 = v1 * v2
+    assert isinstance(v3, Vector)
+    assert v3 == Vector([4, 10, 18])
+
+    # conmutativo
+    assert v2 * v1 == v3
+
+def test_size_error_hadamard_vectors():
+    with pytest.raises(ValueError) as exc_info:
+        Vector([1, 2]) * Vector([1, 2, 3])
+    assert "with shapes (2,) (3,)" in str(exc_info.value)
+
 
 def test_str_vector():
     v1 = Vector.from_values(*range(3))

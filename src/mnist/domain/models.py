@@ -69,8 +69,17 @@ class Vector:
         return Vector(tuple(a + b for a, b in zip(self.values, other.values)))
 
 
-    def __mul__(self, other: int | float):
-        self.__is_correct_type(other, "*", int, float)
+    def __mul__(self, other: "int | float | Vector"):
+        self.__is_correct_type(other, "*", int, float, Vector)
+
+        if isinstance(other, Vector):
+            if len(self) != len(other):
+                raise ValueError(
+                    f"operands could not be broadcast together with shapes "
+                    f"({len(self)},) ({len(other)},)"
+            )
+            return Vector(tuple(a * b for a, b in zip(self.values, other.values)))
+
         return Vector(tuple(x * other for x in self.values))
 
     def __rmul__(self, other: int | float):

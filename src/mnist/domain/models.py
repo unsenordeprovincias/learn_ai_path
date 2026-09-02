@@ -40,6 +40,13 @@ class Vector:
         if not isinstance(other, types):
             raise TypeError(f"unsupported operand type(s) for {operand}: '{type(self).__name__}' and '{type(other).__name__}'")
 
+    def __are_same_length(self, other):
+        if len(self) != len(other):
+            raise ValueError(
+                f"operands could not be broadcast together with shapes "
+                f"({len(self)},) ({len(other)},)"
+        )
+
     def __len__(self):
         return len(self.__values)
 
@@ -51,20 +58,12 @@ class Vector:
 
     def __add__(self, other: "Vector"):
         self.__is_correct_type(other, "+", Vector)
-        if len(self) != len(other):
-            raise ValueError(
-                f"operands could not be broadcast together with shapes "
-                f"({len(self)},) ({len(other)},)"
-        )
+        self.__are_same_length(other)
         return Vector(tuple(a + b for a, b in zip(self.values, other.values)))
 
     def __sub__(self, other: "Vector"):
         self.__is_correct_type(other, "-", Vector)
-        if len(self) != len(other):
-            raise ValueError(
-                f"operands could not be broadcast together with shapes "
-                f"({len(self)},) ({len(other)},)"
-        )
+        self.__are_same_length(other)
         other =  other * -1
         return Vector(tuple(a + b for a, b in zip(self.values, other.values)))
 
@@ -73,11 +72,7 @@ class Vector:
         self.__is_correct_type(other, "*", int, float, Vector)
 
         if isinstance(other, Vector):
-            if len(self) != len(other):
-                raise ValueError(
-                    f"operands could not be broadcast together with shapes "
-                    f"({len(self)},) ({len(other)},)"
-            )
+            self.__are_same_length(other)
             return Vector(tuple(a * b for a, b in zip(self.values, other.values)))
 
         return Vector(tuple(x * other for x in self.values))

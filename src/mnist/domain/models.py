@@ -92,6 +92,40 @@ class Vector:
     def __repr__(self):
         return f"Vector {self.values}"
 
+
+class Matrix:
+    def __init__(self, rows: Iterable[Iterable[float]]):
+        rows = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
+        if rows and any(len(row) != len(rows[0]) for row in rows):
+            raise ValueError(
+                f"all rows must have the same length, got lengths "
+                f"{tuple(len(row) for row in rows)}"
+            )
+        self.__rows = rows
+
+    @property
+    def rows(self):
+        return self.__rows
+
+    @property
+    def shape(self):
+        if not self.__rows:
+            return (0, 0)
+        return (len(self.__rows), len(self.__rows[0]))
+
+    def __matmul__(self, other: "Vector"):
+        if not isinstance(other, Vector):
+            raise TypeError(f"unsupported operand type(s) for @: 'Matrix' and '{type(other).__name__}'")
+        if self.shape[1] != len(other):
+            raise ValueError(
+                f"operands could not be broadcast together with shapes "
+                f"{self.shape} ({len(other)},)"
+            )
+        return Vector([row @ other for row in self.__rows])
+
+    def __repr__(self):
+        return f"Matrix {tuple(row.values for row in self.__rows)}"
+
 @dataclass
 class Cache:
     input_signal: Vector

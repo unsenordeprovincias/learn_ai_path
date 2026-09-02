@@ -87,7 +87,7 @@ class Vector:
 @dataclass
 class Cache:
     input_signal: Vector
-    output_signal: Vector
+    output_signal: float
     weighted_sum: float
 
 class Perceptron:

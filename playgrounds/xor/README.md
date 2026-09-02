@@ -120,6 +120,63 @@ cómo entrenarla:
   esencia, backpropagation a mano).
 - Criterio de parada del entrenamiento (nº de épocas, error mínimo, etc.).
 
+#### Solución implementada
+
+`NeuralNet.backward` (en `src/mnist/domain/models.py`) calcula y aplica el
+gradiente de cada perceptrón, capa por capa, de atrás hacia adelante.
+
+**El error de cada neurona se diagnostica por separado, como un escalar, no
+como una operación vectorizada sobre toda la capa.** Para cada perceptrón se
+calcula su propio `activation_sensivity` (cuánto responde su salida ante un
+cambio en su propio weighted_sum) y su propio `local_error` (cuánta culpa
+tiene ese weighted_sum concreto en el error total), como dos números sueltos,
+no como componentes de un vector que se calcula de una vez para toda la
+capa. Esto no es una cuestión de rendimiento — es reflejar fielmente qué es
+backpropagation en realidad: la regla de la cadena aplicada nodo por nodo.
+Cada neurona solo necesita, para diagnosticarse a sí misma, dos cosas propias
+— la parte del error que le corresponde a ella y su propia pendiente de
+activación — y no le hace falta saber nada de las demás neuronas de su capa
+para hacerlo. Calcularlo así, uno a uno, deja ver esa independencia; hacerlo
+de golpe con vectores (aunque dé el mismo resultado y sea más eficiente)
+esconde el hecho de que en el fondo son N cálculos idénticos e
+independientes, no un único cálculo "de capa".
+
+**Propagar el error hacia la capa anterior, en cambio, sí necesita la capa
+entera a la vez.** Ahí la pregunta cambia: ya no es "¿cuánto le importa a
+esta neurona su propio error?" sino "¿cuánta culpa tiene cada entrada de la
+capa, sumando lo que aportó a *todas* las neuronas que la usaron?". Repartir
+esa culpa exige combinar, para cada entrada, el error de cada neurona con el
+peso que esa neurona le dio a esa entrada — una suma que cruza neuronas, y
+por eso ahí sí hace falta trabajar con la capa entera como vector y matriz,
+no perceptrón a perceptrón.
+
+Esa combinación es un producto matriz-vector, pero con los pesos organizados
+al revés de como se guardan de forma natural. Los pesos de una capa vienen
+"una fila por neurona" (`perceptron.cache.weights` de cada perceptrón, que es
+justo lo que hace falta para el forward pass de esa neurona). Para repartir
+el error hacia atrás hace falta leer esa misma tabla "una fila por entrada"
+— la traspuesta —, porque la culpa de una entrada concreta se arma juntando
+un pedacito de cada neurona, no todos los pedacitos de una sola:
+
+```python
+W_transposed = Matrix([perceptron.cache.weights for perceptron in layer]).T
+loss_grad = W_transposed @ local_error
+```
+
+**El gradiente analítico se contrasta contra uno calculado de forma
+independiente.** `tests/conftest.py` expone `numerical_gradient`, que estima
+la derivada de cada peso y cada bias por diferencia finita — perturbando ese
+único parámetro un poquito hacia cada lado y viendo cuánto cambia la
+pérdida, sin usar ninguna fórmula de backprop. Es una forma de verificación
+habitual en redes neuronales: si el cálculo "manual" (la regla de la cadena
+implementada a mano) y el cálculo "a ciegas" (por diferencias finitas)
+coinciden, es una buena señal de que la implementación de `backward` es
+correcta, no solo de que "compila". Para que la comparación sea directa,
+`numerical_gradient` devuelve, por neurona, un `CachedGradient` — el mismo
+tipo que ya usa el gradiente analítico — de forma que se comparan campo a
+campo (`weights` contra `weights`, `bias` contra `bias`) sin necesidad de
+traducir nada entre los dos cálculos.
+
 ## Fuera de alcance por ahora
 
 Nada de numpy, nada de librerías de ML. El objetivo pedagógico sigue siendo

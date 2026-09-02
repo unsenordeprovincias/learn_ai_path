@@ -106,3 +106,8 @@ def test_initialize_vector():
     v = Vector.initialize(n)
     for value, component in zip(values, v.values):
         assert component == value
+
+def test_one_hot():
+    assert Vector.one_hot(0, 3) == Vector[1, 0, 0]
+    assert Vector.one_hot(1, 3) == Vector[0, 1, 0]
+    assert Vector.one_hot(2, 3) == Vector[0, 0, 1]

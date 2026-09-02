@@ -1,18 +1,28 @@
 from mnist.domain.models import Layer, NeuralNet, Vector, Cache
-from mnist.domain.functions import relu
+from mnist.domain.functions import relu, mse
 import pytest
+from tests.conftest import numerical_gradient
 
 cache_l1_0 = Cache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + 1*1 + (-0.5),  # = 1.5
-    output_signal=1            # = 1
+    output_signal=1,            # = 1
+    weights = Vector[1,1]
 )
 
 # l1[1]: pesos [1, 1], bias -1.5
 cache_l1_1 = Cache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + 1*1 + (-1.5),  # = 0.5
-    output_signal=1            # = 1
+    output_signal=1,            # = 1
+    weights = Vector[1,1]
+)
+
+cache_l1 = Cache(
+    input_signal = cache_l1_0.input_signal,
+    weighted_sum = Vector[cache_l1_0.weighted_sum, cache_l1_1.weighted_sum],
+    output_signal= Vector[cache_l1_0.output_signal, cache_l1_1.output_signal],
+    weights=None
 )
 
 # loutput[0]: pesos [1, -2], bias -0.5
@@ -20,7 +30,15 @@ cache_l1_1 = Cache(
 cache_loutput_0 = Cache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + (-2)*1 + (-0.5),  # = -1.5
-    output_signal=0              # = 0
+    output_signal=0,              # = 0
+    weights= Vector[1, -2]
+)
+
+cache_loutput = Cache(
+    input_signal = cache_loutput_0.input_signal,
+    weighted_sum = Vector[cache_loutput_0.weighted_sum],
+    output_signal = Vector[cache_loutput_0.output_signal],
+    weights=None
 )
 
 @pytest.fixture
@@ -64,13 +82,37 @@ def test_cache_foward(layers_XOR):
     nnXOR = NeuralNet(layers_XOR)
     nnXOR.forward(Vector([1, 1]))
 
-    expected_caches = [cache_l1_0, cache_l1_1, cache_loutput_0]
-    ix = 0
+    expected_p_caches = [cache_l1_0, cache_l1_1, cache_loutput_0]
+    expected_l_caches = [cache_l1, cache_loutput]
+
+    l_ix = p_ix = 0
+
     for layer in nnXOR.layers:
+        assert layer.cache.output_signal == expected_l_caches[l_ix].output_signal
+        assert layer.cache.input_signal == expected_l_caches[l_ix].input_signal
+        assert layer.cache.weighted_sum == expected_l_caches[l_ix].weighted_sum
         for perceptron in layer:
-            assert perceptron.cache.input_signal == expected_caches[ix].input_signal
-            assert perceptron.cache.weighted_sum == expected_caches[ix].weighted_sum
-            assert perceptron.cache.output_signal == expected_caches[ix].output_signal
-            ix += 1
-                                    
-    
+            assert perceptron.cache.input_signal == expected_p_caches[p_ix].input_signal
+            assert perceptron.cache.weighted_sum == expected_p_caches[p_ix].weighted_sum
+            assert perceptron.cache.output_signal == expected_p_caches[p_ix].output_signal
+            p_ix += 1
+        l_ix += 1
+
+
+def test_backward_gradient_cached():                   
+    l1 = Layer(2, 2, relu)
+    loutput = Layer(2, 1, relu)
+    nnAny = NeuralNet([l1, loutput], mse)
+
+    x = Vector[1, 0]
+    y_true = Vector[1]
+
+    output = nnAny.forward(x)
+    nnAny.backward(y_true, learning_rate=0)
+
+    grads = numerical_gradient(nnAny, x, y_true)
+
+    for (layer_idx, neuron_idx, param), grad_num in grads.items():
+        grad_ana = nnAny.layers[layer_idx][neuron_idx].cached_gradient[param]
+        assert grad_ana == pytest.approx(grad_num, rel=1e-4)
+        print(f"✓ Layer {layer_idx}, Neuron {neuron_idx}, {param}: {grad_ana:.6f} ≈ {grad_num:.6f}")

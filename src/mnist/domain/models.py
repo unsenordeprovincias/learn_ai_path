@@ -28,6 +28,10 @@ class Vector:
         values = [uniform(-1, 1) for _ in range(length)]
         return cls(values)
 
+    @classmethod
+    def one_hot(cls, pos: int, length: int):
+        return cls([1.0 if i == pos else 0.0 for i in range(length)])
+    
     @property
     def values(self):
         return self.__values
@@ -89,13 +93,20 @@ class Cache:
     input_signal: Vector
     output_signal: float
     weighted_sum: float
+    weights: Vector
+
+@dataclass
+class CachedGradient:
+    weights: Vector
+    bias: float
 
 class Perceptron:
     def __init__(self, length: int, fActivation: Callable[[float], float]):
         self.weights = Vector.initialize(length)
         self.bias = random()
         self.f_activation = fActivation
-        self.cache = None
+        self.cache: Cache = None
+        self.cached_gradient: CachedGradient = None
 
     def weighted_sum(self, input_signal: Vector) -> float:
         return self.weights @ input_signal + self.bias
@@ -103,12 +114,19 @@ class Perceptron:
     def output(self, input_signal: Vector) -> float:
         weighted_sum = self.weighted_sum(input_signal) 
         output_signal = self.f_activation(weighted_sum)
-        self.cache = Cache(input_signal, output_signal, weighted_sum)
+        self.cache = Cache(
+            input_signal = input_signal, 
+            output_signal = output_signal, 
+            weighted_sum = weighted_sum,
+            weights = Vector(self.weights.values)
+        )
         return output_signal
 
-    def correct(self, delta_weights: Vector, delta_bias: float):
-        self.weights += delta_weights
-        self.bias += delta_bias
+    def correct(self, learning_rate: float):
+        if not learning_rate:
+            return
+        self.weights += (-learning_rate * self.cached_gradient.weights)
+        self.bias += (-learning_rate * self.cached_gradient.bias)
 
     def __repr__(self):
         return (
@@ -119,13 +137,23 @@ class Perceptron:
 
 class Layer:
     def __init__(self, inputs: int, output: int, fActivation: Callable = None):
-        f = (lambda x: 0 if x < 0 else x) if fActivation is None else fActivation
+        self.__f_activation = (lambda x: 0 if x < 0 else x) if fActivation is None else fActivation
 
-        self.perceptrons = [Perceptron(inputs, f) for _ in range(output)]
+        self.perceptrons = [Perceptron(inputs, self.__f_activation) for _ in range(output)]
+        self.cache = None
+
 
     def output(self, _input: Vector) -> Vector:
         result = [perceptron.output(_input) for perceptron in self.perceptrons]
-        return Vector(result)
+        weighted_sums = [perceptron.cache.weighted_sum for perceptron in self.perceptrons]
+        self.cache = Cache(
+            input_signal = _input,
+            weighted_sum=Vector[*weighted_sums],
+            output_signal=Vector[*result],
+            weights=None
+        )
+
+        return self.cache.output_signal
 
     def __len__(self):
         return len(self.perceptrons)
@@ -133,12 +161,25 @@ class Layer:
     def __getitem__(self, key: int):
         return self.perceptrons[key]
 
+    @property
+    def f_activation(self):
+        return self.__f_activation
+
+    def __repr__(self):
+        inputs = len(self.perceptrons[0].weights) if self.perceptrons else 0
+        return (
+            f"Layer(inputs={inputs}, outputs={len(self.perceptrons)}, "
+            f"activation={self.__f_activation.__class__.__name__})"
+        )
+
+
         
 class NeuralNet:
     def __init__(self, layers: list[Layer], floss: Callable = None):
         self.__layers = layers
         self.__num_perceptrons = 0
         self.__floss = floss
+        self.__last_output = None
 
     def __len__(self) -> int:
         return len(self.__layers)        
@@ -160,9 +201,53 @@ class NeuralNet:
     def floss(self):
         return self.__floss
 
+    @property
+    def last_output(self):
+        return self.__last_output
+
     def forward(self, input: Vector) -> Vector:
         for layer in self.layers:
             res = layer.output(input)
             input = res
 
+        self.__last_output = res
+
         return res
+    
+
+    def backward(self, y_true: Vector, learning_rate: float = 0.0):
+        """
+        Propaga error hacia atrás y calcula gradientes.
+        
+        Args:
+            y_true: Vector de salida esperada
+            learning_rate: factor de aprendizaje (si es 0, solo diagnostica)
+        """
+
+        output = self.last_output
+        loss_grad = self.floss.derivative(output, y_true)
+
+        for ix_layer, layer in enumerate(reversed(self.layers)):
+
+            activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
+            local_error = loss_grad @ activation_sensivities
+
+            for pos_in_input, perceptron in enumerate(layer):
+                # diagnosis y grabacion
+                weight_grad = local_error[pos_in_input] * layer.cache.input_signal 
+                bias_grad = local_error[pos_in_input]
+
+                perceptron.cached_grad = CachedGradient(
+                    weights = weight_grad,
+                    bias = bias_grad
+                )
+
+                # corregir
+                perceptron.correct(learning_rate)
+
+            # Propaga loss_grad segun la regla de la cadena a siguiente capa
+            if ix_layer < len(self.layers):
+                W_transposed = Vector([perceptron.cache.weights for perceptron in layer])
+                loss_grad = W_transposed @ local_error
+                
+

@@ -112,7 +112,11 @@ def test_backward_gradient_cached():
 
     grads = numerical_gradient(nnAny, x, y_true)
 
-    for (layer_idx, neuron_idx, param), grad_num in grads.items():
-        grad_ana = nnAny.layers[layer_idx][neuron_idx].cached_gradient[param]
-        assert grad_ana == pytest.approx(grad_num, rel=1e-4)
-        print(f"✓ Layer {layer_idx}, Neuron {neuron_idx}, {param}: {grad_ana:.6f} ≈ {grad_num:.6f}")
+    for (layer_idx, neuron_idx), grad_num in grads.items():
+        grad_ana = nnAny.layers[layer_idx][neuron_idx].cached_gradient
+
+        for w_ana, w_num in zip(grad_ana.weights.values, grad_num.weights.values):
+            assert w_ana == pytest.approx(w_num, rel=1e-4)
+        assert grad_ana.bias == pytest.approx(grad_num.bias, rel=1e-4)
+
+        print(f"✓ Layer {layer_idx}, Neuron {neuron_idx}: {grad_ana} ≈ {grad_num}")

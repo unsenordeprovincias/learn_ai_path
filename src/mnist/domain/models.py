@@ -113,6 +113,11 @@ class Matrix:
             return (0, 0)
         return (len(self.__rows), len(self.__rows[0]))
 
+    @property
+    def T(self):
+        columns = zip(*(row.values for row in self.__rows))
+        return Matrix([list(column) for column in columns])
+
     def __matmul__(self, other: "Vector"):
         if not isinstance(other, Vector):
             raise TypeError(f"unsupported operand type(s) for @: 'Matrix' and '{type(other).__name__}'")
@@ -266,16 +271,18 @@ class NeuralNet:
         loss_grad = self.floss.derivative(output, y_true)
 
         for ix_layer, layer in enumerate(reversed(self.layers)):
-
+            '''
             activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
             local_error = loss_grad @ activation_sensivities
-
+            '''
             for pos_in_input, perceptron in enumerate(layer):
+                activation_sensivity = layer.f_activation.derivative(perceptron.cache.weighted_sum)
+                local_error = loss_grad[pos_in_input] * activation_sensivity
                 # diagnosis y grabacion
-                weight_grad = local_error[pos_in_input] * layer.cache.input_signal 
-                bias_grad = local_error[pos_in_input]
+                weight_grad = local_error * layer.cache.input_signal 
+                bias_grad = local_error
 
-                perceptron.cached_grad = CachedGradient(
+                perceptron.cached_gradient = CachedGradient(
                     weights = weight_grad,
                     bias = bias_grad
                 )
@@ -285,7 +292,10 @@ class NeuralNet:
 
             # Propaga loss_grad segun la regla de la cadena a siguiente capa
             if ix_layer < len(self.layers):
-                W_transposed = Vector([perceptron.cache.weights for perceptron in layer])
+                activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
+                local_error = loss_grad * activation_sensivities
+
+                W_transposed = Matrix([perceptron.cache.weights for perceptron in layer]).T
                 loss_grad = W_transposed @ local_error
                 
 

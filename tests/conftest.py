@@ -1,68 +1,65 @@
-from mnist.domain.models import Vector
+from mnist.domain.models import Vector, CachedGradient
+
+
+def _numerical_derivative(network, x, y_true, perturb, restore, epsilon):
+    perturb(epsilon)
+    loss_plus = network.floss(network.forward(x), y_true)
+
+    perturb(-epsilon)
+    loss_minus = network.floss(network.forward(x), y_true)
+
+    restore()
+    return (loss_plus - loss_minus) / (2 * epsilon)
 
 
 def numerical_gradient(network, x, y_true, epsilon=1e-5):
     """
     Calcula gradientes numéricamente para toda la red.
-    
+
     Args:
         network: instancia de Network
         x: Vector de entrada
         y_true: Vector de salida esperada
         epsilon: perturbación infinitesimal
-    
+
     Returns:
-        dict con estructura: {(layer_idx, neuron_idx, weight_idx): grad_numerico}
-        además {(layer_idx, neuron_idx, 'bias'): grad_numerico}
+        dict {(layer_idx, neuron_idx): CachedGradient}, con la misma forma
+        que el gradiente analítico cacheado en cada Perceptron, para poder
+        compararlos campo a campo sin traducir claves.
     """
     gradients = {}
-    
-    # Itera sobre todas las capas
+
     for layer_idx, layer in enumerate(network.layers):
-        
-        # Itera sobre todas las neuronas en la capa
         for neuron_idx, neuron in enumerate(layer):
 
-            # Gradientes de pesos
             original_weights = neuron.weights
+            weight_grads = []
             for weight_idx in range(len(original_weights)):
                 unit = Vector.one_hot(weight_idx, len(original_weights))
 
-                # Perturbo: w + ε
-                neuron.weights = original_weights + epsilon * unit
-                output_plus = network.forward(x)
-                loss_plus = network.floss(output_plus, y_true)
+                def perturb(delta, unit=unit, original=original_weights):
+                    neuron.weights = original + delta * unit
 
-                # Perturbo: w - ε
-                neuron.weights = original_weights - epsilon * unit
-                output_minus = network.forward(x)
-                loss_minus = network.floss(output_minus, y_true)
+                def restore(original=original_weights):
+                    neuron.weights = original
 
-                # Restauro
-                neuron.weights = original_weights
+                weight_grads.append(
+                    _numerical_derivative(network, x, y_true, perturb, restore, epsilon)
+                )
 
-                # Gradiente numérico
-                grad_numerical = (loss_plus - loss_minus) / (2 * epsilon)
-                gradients[(layer_idx, neuron_idx, weight_idx)] = grad_numerical
-
-            # Gradiente de bias
             original_bias = neuron.bias
 
-            # Perturbo: b + ε
-            neuron.bias = original_bias + epsilon
-            output_plus = network.forward(x)
-            loss_plus = network.floss(output_plus, y_true)
+            def perturb_bias(delta, original=original_bias):
+                neuron.bias = original + delta
 
-            # Perturbo: b - ε
-            neuron.bias = original_bias - epsilon
-            output_minus = network.forward(x)
-            loss_minus = network.floss(output_minus, y_true)
-            
-            # Restauro
-            neuron.bias = original_bias
-            
-            # Gradiente numérico
-            grad_numerical = (loss_plus - loss_minus) / (2 * epsilon)
-            gradients[(layer_idx, neuron_idx, 'bias')] = grad_numerical
-    
+            def restore_bias(original=original_bias):
+                neuron.bias = original
+
+            bias_grad = _numerical_derivative(network, x, y_true, perturb_bias, restore_bias, epsilon)
+
+            gradients[(layer_idx, neuron_idx)] = CachedGradient(
+                weights=Vector(weight_grads),
+                bias=bias_grad
+            )
+
     return gradients

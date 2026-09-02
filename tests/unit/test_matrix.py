@@ -50,3 +50,15 @@ def test_type_error_matmul_matrix():
     m = Matrix([[1, 2], [3, 4]])
     with pytest.raises(TypeError):
         m @ 3
+
+def test_transpose():
+    m = Matrix([[1, 2, 3], [4, 5, 6]])
+    t = m.T
+
+    assert isinstance(t, Matrix)
+    assert t.shape == (3, 2)
+    assert t.rows == (Vector([1, 4]), Vector([2, 5]), Vector([3, 6]))
+
+def test_transpose_twice_returns_equivalent_matrix():
+    m = Matrix([[1, 2, 3], [4, 5, 6]])
+    assert m.T.T.rows == m.rows

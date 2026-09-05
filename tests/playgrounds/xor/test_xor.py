@@ -1,4 +1,4 @@
-from playgrounds.xor import XOR
+from playgrounds.xor.original import XOR
 
 def test_XOR():
     assert XOR(1, 1) == 0

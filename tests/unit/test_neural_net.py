@@ -1,5 +1,5 @@
 from mnist.domain.models import Layer, NeuralNet, Vector, Cache
-from mnist.domain.functions import relu, mse
+from mnist.domain.functions import relu, mse, sigmoid
 import pytest
 from tests.conftest import numerical_gradient
 
@@ -57,7 +57,6 @@ def layers_XOR():
 
     return l1, loutput
 
-
 def test_create_neural_net():
     l1 = Layer(2, 2, relu)
     loutput = Layer(2, 1, relu)
@@ -98,10 +97,13 @@ def test_cache_foward(layers_XOR):
             p_ix += 1
         l_ix += 1
 
+@pytest.mark.parametrize("f_activacion",
+                         [relu, sigmoid])
+def test_backward_gradient_cached(f_activacion):                   
 
-def test_backward_gradient_cached():                   
-    l1 = Layer(2, 2, relu)
-    loutput = Layer(2, 1, relu)
+    
+    l1 = Layer(2, 2, f_activacion)
+    loutput = Layer(2, 1, f_activacion)
     nnAny = NeuralNet([l1, loutput], mse)
 
     x = Vector[1, 0]

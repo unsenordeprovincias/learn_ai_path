@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings", 
     "python-dotenv",
+    "pywebview",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Slicer - test pywebview</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #1e1e1e;
+            color: #eee;
+        }
+        button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        #resultado {
+            margin-top: 1rem;
+            min-height: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>pywebview funciona</h1>
+    <p id="reloj"></p>
+    <button onclick="llamarPython()">Probar API de Python</button>
+    <p id="resultado"></p>
+
+    <script>
+        function actualizarReloj() {
+            document.getElementById('reloj').textContent = new Date().toLocaleTimeString();
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        async function llamarPython() {
+            const resultado = document.getElementById('resultado');
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.ping) {
+                resultado.textContent = await window.pywebview.api.ping();
+            } else {
+                resultado.textContent = 'window.pywebview.api no está expuesta (falta el lado Python)';
+            }
+        }
+    </script>
+</body>
+</html>

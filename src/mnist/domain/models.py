@@ -3,8 +3,6 @@ from random import uniform, random
 from functools import reduce
 from dataclasses import dataclass
 
-
-
 class Vector:
     def __init__(self, values: Iterable[float]):
         for ix, item in enumerate(values):
@@ -92,7 +90,6 @@ class Vector:
     def __repr__(self):
         return f"Vector {self.values}"
 
-
 class Matrix:
     def __init__(self, rows: Iterable[Iterable[float]]):
         rows = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
@@ -130,6 +127,11 @@ class Matrix:
 
     def __repr__(self):
         return f"Matrix {tuple(row.values for row in self.__rows)}"
+
+@dataclass
+class Sample:
+    x: Vector
+    y_true: Vector
 
 @dataclass
 class Cache:

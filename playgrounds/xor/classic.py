@@ -1,12 +1,7 @@
-from mnist.domain.models import NeuralNet, Layer, Vector
+from mnist.domain.models import NeuralNet, Layer, Vector, Sample
 from mnist.domain.functions import mse, sigmoid
-from dataclasses import dataclass
 from random import choices
 
-@dataclass
-class Sample:
-    x: Vector
-    y_true: Vector
 
 def set_infrastructure():
     l1 = Layer(2, 2, sigmoid)

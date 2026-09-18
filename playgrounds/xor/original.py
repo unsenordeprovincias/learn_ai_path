@@ -1,6 +1,9 @@
 from mnist.domain.models import Layer, Vector
+from mnist.domain.functions import IndependentActivation
 
-_step = lambda x: 0 if x < 0 else 1
+
+step_fn = lambda x: 0 if x < 0 else 1
+_step = IndependentActivation(fn=step_fn, fn_derivative=None)
 
 layer1 = Layer(2, 2, _step)
 layer1[0].weights = Vector([1, 1])

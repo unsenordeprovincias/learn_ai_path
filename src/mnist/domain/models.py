@@ -125,8 +125,17 @@ class Matrix:
             )
         return Vector([row @ other for row in self.__rows])
 
+    def __getitem__(self, key):
+        return self.__rows[key]
+
     def __repr__(self):
         return f"Matrix {tuple(row.values for row in self.__rows)}"
+
+    def __eq__(self, other):
+        return isinstance(other, Matrix) and self.__rows == other.rows
+
+    def __hash__(self):
+        return hash(self.__rows)
 
 @dataclass
 class Sample:
@@ -134,11 +143,16 @@ class Sample:
     y_true: Vector
 
 @dataclass
-class Cache:
+class PerceptronCache:
     input_signal: Vector
-    output_signal: float
     weighted_sum: float
     weights: Vector
+
+@dataclass
+class LayerCache:
+    input_signal: Vector
+    weighted_sum: Vector     # el vector reunido de todos los perceptrones
+    output_signal: Vector    # ya activado, resultado de f_activation sobre weighted_sum
 
 @dataclass
 class CachedGradient:
@@ -146,11 +160,10 @@ class CachedGradient:
     bias: float
 
 class Perceptron:
-    def __init__(self, length: int, fActivation: Callable[[float], float]):
-        self.weights = Vector.initialize(length)
+    def __init__(self, inputs_length: int):
+        self.weights = Vector.initialize(inputs_length)
         self.bias = random()
-        self.f_activation = fActivation
-        self.cache: Cache = None
+        self.cache: PerceptronCache = None
         self.cached_gradient: CachedGradient = None
 
     def weighted_sum(self, input_signal: Vector) -> float:
@@ -158,14 +171,12 @@ class Perceptron:
 
     def output(self, input_signal: Vector) -> float:
         weighted_sum = self.weighted_sum(input_signal) 
-        output_signal = self.f_activation(weighted_sum)
-        self.cache = Cache(
+        self.cache = PerceptronCache(
             input_signal = input_signal, 
-            output_signal = output_signal, 
             weighted_sum = weighted_sum,
             weights = Vector(self.weights.values)
         )
-        return output_signal
+        return weighted_sum
 
     def correct(self, learning_rate: float):
         if not learning_rate:
@@ -174,28 +185,22 @@ class Perceptron:
         self.bias += (-learning_rate * self.cached_gradient.bias)
 
     def __repr__(self):
-        return (
-            f"Perceptron(inputs={len(self.weights)}, "
-            f"bias={self.bias:.4f}, "
-            f"activation={self.f_activation.__class__.__name__})"
-        )
+        return f"Perceptron(inputs={len(self.weights)}, bias={self.bias:.4f})"
 
 class Layer:
-    def __init__(self, inputs: int, output: int, fActivation: Callable = None):
-        self.__f_activation = (lambda x: 0 if x < 0 else x) if fActivation is None else fActivation
+    def __init__(self, inputs: int, output: int, fActivation: Callable):
+        self.__f_activation = fActivation
 
-        self.perceptrons = [Perceptron(inputs, self.__f_activation) for _ in range(output)]
+        self.perceptrons = [Perceptron(inputs) for _ in range(output)]
         self.cache = None
 
 
     def output(self, _input: Vector) -> Vector:
-        result = [perceptron.output(_input) for perceptron in self.perceptrons]
-        weighted_sums = [perceptron.cache.weighted_sum for perceptron in self.perceptrons]
-        self.cache = Cache(
+        weighted_sums = Vector([perceptron.output(_input) for perceptron in self.perceptrons])
+        self.cache = LayerCache(
             input_signal = _input,
-            weighted_sum=Vector[*weighted_sums],
-            output_signal=Vector[*result],
-            weights=None
+            weighted_sum=weighted_sums,
+            output_signal=self.f_activation(weighted_sums),
         )
 
         return self.cache.output_signal
@@ -216,8 +221,6 @@ class Layer:
             f"Layer(inputs={inputs}, outputs={len(self.perceptrons)}, "
             f"activation={self.__f_activation.__class__.__name__})"
         )
-
-
         
 class NeuralNet:
     def __init__(self, layers: list[Layer], floss: Callable = None):
@@ -277,9 +280,11 @@ class NeuralNet:
             activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
             local_error = loss_grad @ activation_sensivities
             '''
+            jacobian = layer.f_activation.derivative(layer.cache.weighted_sum)
+            delta = jacobian @ loss_grad
+
             for pos_in_input, perceptron in enumerate(layer):
-                activation_sensivity = layer.f_activation.derivative(perceptron.cache.weighted_sum)
-                local_error = loss_grad[pos_in_input] * activation_sensivity
+                local_error = delta[pos_in_input]
                 # diagnosis y grabacion
                 weight_grad = local_error * layer.cache.input_signal 
                 bias_grad = local_error
@@ -293,11 +298,8 @@ class NeuralNet:
                 perceptron.correct(learning_rate)
 
             # Propaga loss_grad segun la regla de la cadena a siguiente capa
-            if ix_layer < len(self.layers):
-                activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
-                local_error = loss_grad * activation_sensivities
-
+            if ix_layer < len(self.layers) - 1:
                 W_transposed = Matrix([perceptron.cache.weights for perceptron in layer]).T
-                loss_grad = W_transposed @ local_error
+                loss_grad = W_transposed @ delta
                 
 

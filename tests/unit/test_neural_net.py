@@ -1,49 +1,50 @@
-from mnist.domain.models import Layer, NeuralNet, Vector, Cache
-from mnist.domain.functions import relu, mse, sigmoid
+from mnist.domain.models import Layer, NeuralNet, Vector, LayerCache, PerceptronCache
+from mnist.domain.functions import relu, mse, sigmoid, IndependentActivation
 import pytest
 from tests.conftest import numerical_gradient
 
-cache_l1_0 = Cache(
+cache_l1_0 = PerceptronCache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + 1*1 + (-0.5),  # = 1.5
-    output_signal=1,            # = 1
+    # output_signal=1,            # = 1
     weights = Vector[1,1]
 )
 
 # l1[1]: pesos [1, 1], bias -1.5
-cache_l1_1 = Cache(
+cache_l1_1 = PerceptronCache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + 1*1 + (-1.5),  # = 0.5
-    output_signal=1,            # = 1
+    # output_signal=1,            # = 1
     weights = Vector[1,1]
 )
 
-cache_l1 = Cache(
+cache_l1 = LayerCache(
     input_signal = cache_l1_0.input_signal,
     weighted_sum = Vector[cache_l1_0.weighted_sum, cache_l1_1.weighted_sum],
-    output_signal= Vector[cache_l1_0.output_signal, cache_l1_1.output_signal],
-    weights=None
+    output_signal= Vector[1, 1],
+    # weights=None
 )
 
 # loutput[0]: pesos [1, -2], bias -0.5
 # Entrada: [cache_l1_0.output_signal, cache_l1_1.output_signal] = [1, 1]
-cache_loutput_0 = Cache(
+cache_loutput_0 = PerceptronCache(
     input_signal=Vector[1, 1],
     weighted_sum=1*1 + (-2)*1 + (-0.5),  # = -1.5
-    output_signal=0,              # = 0
+    # output_signal=0,              # = 0
     weights= Vector[1, -2]
 )
 
-cache_loutput = Cache(
-    input_signal = cache_loutput_0.input_signal,
+cache_loutput = LayerCache(
+    input_signal = Vector[1, 1],
     weighted_sum = Vector[cache_loutput_0.weighted_sum],
-    output_signal = Vector[cache_loutput_0.output_signal],
-    weights=None
+    output_signal = Vector[0],
+    # weights=None
 )
 
 @pytest.fixture
 def layers_XOR():
-    _step = lambda x: 0 if x < 0 else 1
+    step_fn = lambda x: 0 if x < 0 else 1
+    _step = IndependentActivation(fn=step_fn, fn_derivative=None)
 
     l1 = Layer(2, 2, _step)
     l1[0].weights = Vector([1, 1])
@@ -93,7 +94,7 @@ def test_cache_foward(layers_XOR):
         for perceptron in layer:
             assert perceptron.cache.input_signal == expected_p_caches[p_ix].input_signal
             assert perceptron.cache.weighted_sum == expected_p_caches[p_ix].weighted_sum
-            assert perceptron.cache.output_signal == expected_p_caches[p_ix].output_signal
+            assert perceptron.cache.weights == expected_p_caches[p_ix].weights
             p_ix += 1
         l_ix += 1
 

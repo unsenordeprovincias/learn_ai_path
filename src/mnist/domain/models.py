@@ -289,8 +289,10 @@ class NeuralNet:
             local_error = loss_grad @ activation_sensivities
             '''
             jacobian = layer.f_activation.derivative(layer.cache.weighted_sum)
-            # delta = jacobian @ loss_grad
-            delta = loss_grad @ jacobian # el orden importa, por eso lo transpongo la diagonal es la misma independientes, pero las alas son simetricas interdependientes
+            # Con J[i][j] = da_i/dz_j, la regla de la cadena da dL/dz_j = sum_i g_i * J[i][j],
+            # es decir J^T g, que se escribe g @ J. El orden importa: solo con un Jacobiano
+            # simetrico (diagonal, softmax) J g y J^T g coinciden.
+            delta = loss_grad @ jacobian
 
             for pos_in_input, perceptron in enumerate(layer):
                 local_error = delta[pos_in_input]

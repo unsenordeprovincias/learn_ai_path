@@ -135,9 +135,10 @@ class SoftmaxCrossEntropy(Loss):
     resuelta algebraicamente — sin pasar nunca por -1/p."""
 
     def __call__(self, a_out: Vector, y_true: Vector) -> float:
-        p = self._softmax(a_out)
         c = y_true.values.index(1.0)
-        return -log(p[c])
+        m = max(a_out.values)
+        log_sum_exp = log(sum(exp(x - m) for x in a_out.values))
+        return log_sum_exp - (a_out[c] - m)
 
     def derivative(self, a_out: Vector, y_true: Vector) -> Vector:
         p = self._softmax(a_out)

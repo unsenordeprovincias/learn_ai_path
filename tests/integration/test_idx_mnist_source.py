@@ -61,3 +61,39 @@ def test_ficheros_intercambiados_lanzan_error_al_construir_la_fuente():
 
     with pytest.raises(ValueError):
         IdxMnistSource(lbl_source, img_source)
+
+
+# ---------- tamaño del cuerpo frente a lo que declara la cabecera ----------
+# Un .gz descargado a medias tiene la cabecera bien y le faltan datos: debe
+# fallar al construir la fuente, no a mitad de una época.
+
+def _par_de_dos():
+    return _fabricar_par([([0] * 28 * 28, 1), ([255] * 28 * 28, 2)])
+
+
+def test_fichero_de_imagenes_truncado_lanza_error_al_construir():
+    img_source, lbl_source = _par_de_dos()
+
+    with pytest.raises(ValueError, match="images file"):
+        IdxMnistSource(img_source[:-10], lbl_source)
+
+
+def test_fichero_de_labels_truncado_lanza_error_al_construir():
+    img_source, lbl_source = _par_de_dos()
+
+    with pytest.raises(ValueError, match="labels file"):
+        IdxMnistSource(img_source, lbl_source[:-1])
+
+
+def test_fichero_de_imagenes_con_bytes_sobrantes_lanza_error_al_construir():
+    img_source, lbl_source = _par_de_dos()
+
+    with pytest.raises(ValueError, match="images file"):
+        IdxMnistSource(img_source + b"\x00", lbl_source)
+
+
+def test_fichero_de_labels_con_bytes_sobrantes_lanza_error_al_construir():
+    img_source, lbl_source = _par_de_dos()
+
+    with pytest.raises(ValueError, match="labels file"):
+        IdxMnistSource(img_source, lbl_source + b"\x00")

@@ -54,6 +54,17 @@ def test_num_dims_declarado_no_coincide_con_las_dimensiones_leidas(header):
         parse_idx_header(header)
 
 
+@pytest.mark.parametrize("header", [
+    b"",                                            # fichero vacio
+    b"\x00\x00\x08",                                # ni siquiera cabe el magic number
+    struct.pack('>II', 0x00000801, 2) + b"\x00",    # sobra un byte
+    struct.pack('>II', 0x00000801, 2)[:-1],         # falta un byte
+])
+def test_cabecera_con_longitud_que_no_es_multiplo_de_4_lanza_error(header):
+    with pytest.raises(ValueError, match="multiple of 4"):
+        parse_idx_header(header)
+
+
 # ---------- Nivel 2: una sola imagen / un solo label ----------
 
 def _fabricar_idx_imagenes(pixel_matrices):

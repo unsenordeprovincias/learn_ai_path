@@ -7,6 +7,11 @@ xtract_format = lambda b: ">"+"I"*(len(b)//4)
 UBYTE = 0x08  # unico tipo que leen los parsers (struct 'B'), y el que usa MNIST
 
 def parse_idx_header(source: bytes):
+    if not source or len(source) % 4:
+        raise ValueError(
+            f"IDX header length must be a positive multiple of 4 bytes, got {len(source)}: "
+            "empty or truncated file"
+        )
     values = struct.unpack(xtract_format(source), source)
     dims = list(values[1:])
     zero_1, zero_2, data_type, num_dims = struct.unpack('>BBBB', struct.pack('>I', values[0]))
@@ -63,6 +68,22 @@ class IdxMnistSource:
 
         if img_dims[0] != lbl_dims[0]:
             raise ValueError("Images and Labels number are differents")
+
+        num_images, width, height = img_dims
+        expected_images = 16 + num_images * width * height
+        if len(images_source) != expected_images:
+            raise ValueError(
+                f"IDX images file has {len(images_source)} bytes but its header "
+                f"({num_images} images of {width}x{height}) implies {expected_images}: "
+                "truncated or corrupt file"
+            )
+
+        expected_labels = 8 + lbl_dims[0]
+        if len(labels_source) != expected_labels:
+            raise ValueError(
+                f"IDX labels file has {len(labels_source)} bytes but its header "
+                f"({lbl_dims[0]} labels) implies {expected_labels}: truncated or corrupt file"
+            )
 
     def load(self) -> Iterator[Sample]:
         images_generator = parse_idx_images(self.images_source)

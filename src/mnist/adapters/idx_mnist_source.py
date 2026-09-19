@@ -1,5 +1,6 @@
 import struct
 from mnist.domain.models import Sample, Vector
+from mnist.ports.sample_source import SampleSource
 from typing import Iterator
 
 xtract_format = lambda b: ">"+"I"*(len(b)//4)
@@ -41,8 +42,8 @@ def parse_idx_images(source: bytes):
     _format = ">"+"B" * len_image
 
     for i in range(num_images):
-        image = images[:len_image]
-        image = struct.unpack(_format, image)
+        raw_image = images[:len_image]
+        image = struct.unpack(_format, raw_image)
         images = images[len_image:]
         yield image
 
@@ -55,7 +56,7 @@ def parse_idx_labels(source: bytes):
         label = labels[i]
         yield label        
 
-class IdxMnistSource:
+class IdxMnistSource(SampleSource):
     def __init__(self, images_source, labels_source):
         self.images_source = images_source
         self.labels_source = labels_source

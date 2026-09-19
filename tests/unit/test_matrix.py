@@ -18,7 +18,7 @@ def test_rows_must_have_same_length():
 
 def test_items_of_matrix_must_be_floats():
     with pytest.raises(TypeError) as exc_info:
-        Matrix([[1, 'a'], [3, 4]])
+        Matrix([[1, 'a'], [3, 4]])  # type: ignore[list-item]  # tipo invalido a proposito
     assert "must be float" in str(exc_info.value)
 
 def test_shape():
@@ -49,7 +49,7 @@ def test_size_error_matmul_matrix_vector():
 def test_type_error_matmul_matrix():
     m = Matrix([[1, 2], [3, 4]])
     with pytest.raises(TypeError):
-        m @ 3
+        m @ 3  # type: ignore[operator]  # tipo invalido a proposito
 
 def test_transpose():
     m = Matrix([[1, 2, 3], [4, 5, 6]])

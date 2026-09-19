@@ -4,40 +4,40 @@ import pytest
 from tests.conftest import numerical_gradient
 
 cache_l1_0 = PerceptronCache(
-    input_signal=Vector[1, 1],
+    input_signal=Vector[1, 1],  # type: ignore[misc]
     weighted_sum=1*1 + 1*1 + (-0.5),  # = 1.5
     # output_signal=1,            # = 1
-    weights = Vector[1,1]
+    weights = Vector[1,1]  # type: ignore[misc]
 )
 
 # l1[1]: pesos [1, 1], bias -1.5
 cache_l1_1 = PerceptronCache(
-    input_signal=Vector[1, 1],
+    input_signal=Vector[1, 1],  # type: ignore[misc]
     weighted_sum=1*1 + 1*1 + (-1.5),  # = 0.5
     # output_signal=1,            # = 1
-    weights = Vector[1,1]
+    weights = Vector[1,1]  # type: ignore[misc]
 )
 
 cache_l1 = LayerCache(
     input_signal = cache_l1_0.input_signal,
-    weighted_sum = Vector[cache_l1_0.weighted_sum, cache_l1_1.weighted_sum],
-    output_signal= Vector[1, 1],
+    weighted_sum = Vector[cache_l1_0.weighted_sum, cache_l1_1.weighted_sum],  # type: ignore[misc]
+    output_signal= Vector[1, 1],  # type: ignore[misc]
     # weights=None
 )
 
 # loutput[0]: pesos [1, -2], bias -0.5
 # Entrada: [cache_l1_0.output_signal, cache_l1_1.output_signal] = [1, 1]
 cache_loutput_0 = PerceptronCache(
-    input_signal=Vector[1, 1],
+    input_signal=Vector[1, 1],  # type: ignore[misc]
     weighted_sum=1*1 + (-2)*1 + (-0.5),  # = -1.5
     # output_signal=0,              # = 0
-    weights= Vector[1, -2]
+    weights= Vector[1, -2]  # type: ignore[misc]
 )
 
 cache_loutput = LayerCache(
-    input_signal = Vector[1, 1],
-    weighted_sum = Vector[cache_loutput_0.weighted_sum],
-    output_signal = Vector[0],
+    input_signal = Vector[1, 1],  # type: ignore[misc]
+    weighted_sum = Vector[cache_loutput_0.weighted_sum],  # type: ignore[misc]
+    output_signal = Vector[0],  # type: ignore[misc]
     # weights=None
 )
 
@@ -107,8 +107,8 @@ def test_backward_gradient_cached(f_activacion):
     loutput = Layer(2, 1, f_activacion)
     nnAny = NeuralNet([l1, loutput], mse)
 
-    x = Vector[1, 0]
-    y_true = Vector[1]
+    x: Vector = Vector[1, 0]  # type: ignore[misc]
+    y_true: Vector = Vector[1]  # type: ignore[misc]
 
     output = nnAny.forward(x)
     nnAny.backward(y_true, learning_rate=0)

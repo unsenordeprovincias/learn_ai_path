@@ -10,6 +10,8 @@ class Vector:
                 raise TypeError(f"Item {ix}, value = {item}, type = '{type(item).__name__}' must be float")
         self.__values = tuple(values)
 
+    # mypy lee Vector[...] como una aplicacion de tipo generico y lo rechaza (una metaclase
+    # con __getitem__ tampoco lo arregla), asi que cada uso lleva `# type: ignore[misc]`.
     @classmethod
     def __class_getitem__(cls, args):
         if not isinstance(args, tuple):
@@ -94,14 +96,14 @@ class Vector:
         return f"Vector {self.values}"
 
 class Matrix:
-    def __init__(self, rows: Iterable[Iterable[float]]):
-        rows = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
-        if rows and any(len(row) != len(rows[0]) for row in rows):
+    def __init__(self, rows: Iterable[Vector | Iterable[float]]):
+        vectors = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
+        if vectors and any(len(row) != len(vectors[0]) for row in vectors):
             raise ValueError(
                 f"all rows must have the same length, got lengths "
-                f"{tuple(len(row) for row in rows)}"
+                f"{tuple(len(row) for row in vectors)}"
             )
-        self.__rows = rows
+        self.__rows = vectors
 
     @property
     def rows(self):
@@ -171,8 +173,8 @@ class Perceptron:
     def __init__(self, inputs_length: int):
         self.weights = Vector.initialize(inputs_length)
         self.bias = random()
-        self.cache: PerceptronCache = None
-        self.cached_gradient: CachedGradient = None
+        self.cache: PerceptronCache | None = None
+        self.cached_gradient: CachedGradient | None = None
 
     def weighted_sum(self, input_signal: Vector) -> float:
         return self.weights @ input_signal + self.bias
@@ -189,6 +191,7 @@ class Perceptron:
     def correct(self, learning_rate: float):
         if not learning_rate:
             return
+        assert self.cached_gradient is not None, "backward must compute the gradient before correct"
         self.weights += (-learning_rate * self.cached_gradient.weights)
         self.bias += (-learning_rate * self.cached_gradient.bias)
 
@@ -200,7 +203,7 @@ class Layer:
         self.__f_activation = fActivation
 
         self.perceptrons = [Perceptron(inputs) for _ in range(output)]
-        self.cache = None
+        self.cache: LayerCache | None = None
 
 
     def output(self, _input: Vector) -> Vector:
@@ -231,7 +234,7 @@ class Layer:
         )
         
 class NeuralNet:
-    def __init__(self, layers: list[Layer], floss: Callable = None):
+    def __init__(self, layers: list[Layer], floss: Callable | None = None):
         self.__layers = layers
         self.__num_perceptrons = 0
         self.__floss = floss

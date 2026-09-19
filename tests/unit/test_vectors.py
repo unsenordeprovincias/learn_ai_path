@@ -10,7 +10,7 @@ def test_create_vector():
     assert isinstance(v.values, tuple)
 
     #more pythonic
-    v1 = Vector[2, 4, 6]
+    v1: Vector = Vector[2, 4, 6]  # type: ignore[misc]
     assert isinstance(v1, Vector)
     assert len(v1) == 3
     assert v1[0] == 2
@@ -26,7 +26,7 @@ def test_create_vector_from_values():
 
 def test_items_of_vector_must_be_floats():
     with pytest.raises(TypeError) as exception_info:
-        Vector([1, 'a', 3])
+        Vector([1, 'a', 3])  # type: ignore[list-item]  # tipo invalido a proposito
     assert "must be float" in str(exception_info.value)
     assert exception_info.type == TypeError
 
@@ -69,10 +69,10 @@ def test_type_errors_operations_with_vectors():
     v2 = v1 * 2
 
     with pytest.raises(TypeError):
-        v1 + 3
+        v1 + 3  # type: ignore[operator]  # tipo invalido a proposito
 
     with pytest.raises(TypeError):
-        v1 @ 3
+        v1 @ 3  # type: ignore[operator]  # tipo invalido a proposito
 
 def test_vectors_products():
     v1 = Vector([1, 2, 3])
@@ -124,6 +124,6 @@ def test_initialize_vector():
         assert component == value
 
 def test_one_hot():
-    assert Vector.one_hot(0, 3) == Vector[1, 0, 0]
-    assert Vector.one_hot(1, 3) == Vector[0, 1, 0]
-    assert Vector.one_hot(2, 3) == Vector[0, 0, 1]
+    assert Vector.one_hot(0, 3) == Vector[1, 0, 0]  # type: ignore[misc]
+    assert Vector.one_hot(1, 3) == Vector[0, 1, 0]  # type: ignore[misc]
+    assert Vector.one_hot(2, 3) == Vector[0, 0, 1]  # type: ignore[misc]

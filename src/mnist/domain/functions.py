@@ -54,7 +54,7 @@ class IndependentActivation(Activation):
     """Toda activación independiente comparte esta forma:
     aplica una función escalar componente a componente,
     y su derivada es siempre una matriz diagonal."""
-    def __init__(self, fn: Callable[[float], float], fn_derivative: Callable[[float], float]):
+    def __init__(self, fn: Callable[[float], float], fn_derivative: Callable[[float], float] | None):
         self._fn = fn
         self._fn_derivative = fn_derivative
 
@@ -62,6 +62,8 @@ class IndependentActivation(Activation):
         return Vector([self._fn(x) for x in z.values])
 
     def derivative(self, z: Vector) -> Matrix:
+        if self._fn_derivative is None:
+            raise NotImplementedError("this activation has no derivative, so it cannot be used in backward")
         n = len(z)
         return Matrix([
             [self._fn_derivative(z[i]) if i == j else 0.0 for j in range(n)]

@@ -53,3 +53,11 @@ def test_desajuste_entre_n_imagenes_y_n_labels_lanza_error():
 
     with pytest.raises(ValueError):
         IdxMnistSource(img_source, lbl_source).load()
+
+
+def test_ficheros_intercambiados_lanzan_error_al_construir_la_fuente():
+    # 8 muestras: el fichero de labels (16 bytes) tiene el tamaño justo de una cabecera de imágenes
+    img_source, lbl_source = _fabricar_par([([0] * 28 * 28, label) for label in range(8)])
+
+    with pytest.raises(ValueError):
+        IdxMnistSource(lbl_source, img_source)

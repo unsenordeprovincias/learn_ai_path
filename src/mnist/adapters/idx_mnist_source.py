@@ -4,12 +4,25 @@ from typing import Iterator
 
 xtract_format = lambda b: ">"+"I"*(len(b)//4)
 
+UBYTE = 0x08  # unico tipo que leen los parsers (struct 'B'), y el que usa MNIST
+
 def parse_idx_header(source: bytes):
     values = struct.unpack(xtract_format(source), source)
     dims = list(values[1:])
-    _, _, data_type, num_dims = struct.unpack('>BBBB', struct.pack('>I', values[0]))
-    if not data_type or not num_dims:
-        raise ValueError("Magic number must be greater than 0")
+    zero_1, zero_2, data_type, num_dims = struct.unpack('>BBBB', struct.pack('>I', values[0]))
+    if zero_1 or zero_2:
+        raise ValueError(
+            f"IDX magic number must start with two zero bytes, got {zero_1:#04x} {zero_2:#04x}"
+        )
+    if data_type != UBYTE:
+        raise ValueError(
+            f"Unsupported IDX data type {data_type:#04x}: only unsigned byte ({UBYTE:#04x}) is supported"
+        )
+    if num_dims != len(dims):
+        raise ValueError(
+            f"IDX header declares {num_dims} dimension(s) but {len(dims)} size field(s) were read: "
+            "wrong kind of file (images vs labels) or truncated header"
+        )
 
     return data_type, num_dims, dims
 

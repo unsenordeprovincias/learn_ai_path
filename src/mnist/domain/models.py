@@ -79,6 +79,9 @@ class Vector:
         return self.__mul__(other)
 
     def __matmul__(self, other: "Vector"):
+        if isinstance(other, Matrix):
+            return NotImplemented  # deja que Python intente Vector.__rmatmul__
+        
         self.__is_correct_type(other, "@", Vector)
         if len(self) != len(other):
             raise ValueError(
@@ -124,6 +127,11 @@ class Matrix:
                 f"{self.shape} ({len(other)},)"
             )
         return Vector([row @ other for row in self.__rows])
+
+    def __rmatmul__(self, other: "Vector") -> "Vector":
+        # se invoca cuando: other(Vector) @ self(Matrix)
+        # y Vector.__matmul__ devolvió NotImplemented
+        return self.T @ other
 
     def __getitem__(self, key):
         return self.__rows[key]
@@ -281,7 +289,8 @@ class NeuralNet:
             local_error = loss_grad @ activation_sensivities
             '''
             jacobian = layer.f_activation.derivative(layer.cache.weighted_sum)
-            delta = jacobian @ loss_grad
+            # delta = jacobian @ loss_grad
+            delta = loss_grad @ jacobian # el orden importa, por eso lo transpongo la diagonal es la misma independientes, pero las alas son simetricas interdependientes
 
             for pos_in_input, perceptron in enumerate(layer):
                 local_error = delta[pos_in_input]

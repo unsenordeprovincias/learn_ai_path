@@ -117,14 +117,33 @@ mse = MSE()
 
 
 class CrossEntropy(Loss):
-    def __call__(self, a_out: Vector, y_true: Vector) -> float:
+    """Recibe probabilidades (p. ej. la salida de softmax), no logits.
+    Si la probabilidad de la clase verdadera es 0, la pérdida es infinita y
+    -1/p no está definido: falla en vez de devolver un valor falso. Con logits
+    extremos (clase correcta ~745 por debajo del máximo) softmax ya devuelve
+    0.0 y esa información no se puede recuperar aquí; usa softmax_cross_entropy,
+    que trabaja con los logits."""
+
+    def _true_class_probability(self, a_out: Vector, y_true: Vector):
         c = y_true.values.index(1.0)
-        return - log(a_out[c])
+        p = a_out[c]
+        if p <= 0:
+            raise ValueError(
+                f"cross_entropy: probability of the true class (index {c}) is {p}, "
+                "so log(p) and -1/p are undefined. This usually means softmax "
+                "underflowed because of extreme logits; use softmax_cross_entropy, "
+                "which works on the logits."
+            )
+        return c, p
+
+    def __call__(self, a_out: Vector, y_true: Vector) -> float:
+        _, p = self._true_class_probability(a_out, y_true)
+        return - log(p)
 
     def derivative(self, a_out: Vector, y_true: Vector) -> Vector:
-        c = y_true.values.index(1.0)
+        c, p = self._true_class_probability(a_out, y_true)
         grad = [0.0] * len(a_out)
-        grad[c] = -1.0 / a_out[c]
+        grad[c] = -1.0 / p
         return Vector(grad)
 
 cross_entropy = CrossEntropy()

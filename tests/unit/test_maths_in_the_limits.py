@@ -1,7 +1,8 @@
 # tests/unit/test_backward_jacobian_convention.py
 from mnist.domain.models import Vector, Matrix, Layer, NeuralNet
-from mnist.domain.functions import Activation, Loss, softmax, softmax_cross_entropy
+from mnist.domain.functions import Activation, Loss, softmax, cross_entropy, softmax_cross_entropy
 from math import log
+import pytest
 
 
 
@@ -66,3 +67,17 @@ def test_softmax_cross_entropy_coincide_con_calculo_directo_en_caso_normal():
     esperado = -log(p[1])
 
     assert abs(resultado - esperado) < 1e-9
+
+
+def test_cross_entropy_falla_con_probabilidad_cero_de_la_clase_verdadera():
+    """Con logits extremos softmax devuelve p[c] = 0.0 exacto. cross_entropy no
+    puede recuperar esa información: debe fallar (pérdida y derivada) y avisar
+    de que use la versión fusionada."""
+    p = softmax(Vector([800.0, 0.0]))
+    y = Vector([0.0, 1.0])  # clase correcta es la de logit muy bajo
+
+    with pytest.raises(ValueError, match="softmax_cross_entropy"):
+        cross_entropy(p, y)
+
+    with pytest.raises(ValueError, match="softmax_cross_entropy"):
+        cross_entropy.derivative(p, y)

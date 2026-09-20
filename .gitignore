@@ -13,3 +13,6 @@ wheels/
 
 # Type checker cache
 .mypy_cache/
+
+# Decompressed MNIST IDX files (derivable from the tracked .gz)
+playgrounds/original_mnist/datasets/*-ubyte

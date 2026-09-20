@@ -2,7 +2,7 @@
 import struct
 from itertools import islice
 from mnist.adapters.idx_mnist_source import IdxMnistSource
-from mnist.domain.models import Sample, Vector
+from mnist.domain.models import NetSample, Vector
 import pytest
 
 
@@ -28,7 +28,7 @@ def test_numero_de_samples_coincide_con_numero_de_labels():
     samples = list(IdxMnistSource(img_source, lbl_source).load())
 
     assert len(samples) == 2
-    assert all(isinstance(s, Sample) for s in samples)
+    assert all(isinstance(s, NetSample) for s in samples)
 
 
 def test_cada_sample_empareja_imagen_con_su_label_correcto():

@@ -1,4 +1,4 @@
-from mnist.domain.models import NeuralNet, Layer, Vector, Sample
+from mnist.domain.models import NeuralNet, Layer, Vector, NetSample
 from mnist.domain.functions import mse, sigmoid
 from random import choices
 
@@ -10,16 +10,16 @@ def set_infrastructure():
     nnXOR = NeuralNet([l1, loutput], mse)
 
     dataset = [
-        Sample(x=Vector[0, 0], y_true=Vector[0]),
-        Sample(x=Vector[0, 1], y_true=Vector[1]),
-        Sample(x=Vector[1, 0], y_true=Vector[1]),
-        Sample(x=Vector[1, 1], y_true=Vector[0])
+        NetSample(x=Vector[0, 0], y_true=Vector[0]),
+        NetSample(x=Vector[0, 1], y_true=Vector[1]),
+        NetSample(x=Vector[1, 0], y_true=Vector[1]),
+        NetSample(x=Vector[1, 1], y_true=Vector[0])
     ]
 
     return nnXOR, dataset
 
 def train(network: NeuralNet, 
-          dataset: list[Sample], 
+          dataset: list[NetSample], 
           n_epochs: int = 5000, 
           learning_rate: float = 0.5, 
           num_registers: int = 10) -> NeuralNet:

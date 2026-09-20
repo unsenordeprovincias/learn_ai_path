@@ -1,5 +1,5 @@
 from mnist.domain.functions import mse, sigmoid
-from mnist.domain.models import NeuralNet, Layer, Vector, Sample
+from mnist.domain.models import NeuralNet, Layer, Vector, NetSample
 import numpy as np
 import plotly.graph_objects as go
 from plotly.colors import sample_colorscale
@@ -8,10 +8,10 @@ l1 = Layer(2, 1, sigmoid)
 nn = NeuralNet([l1], mse)
 
 dataset = [
-        Sample(x=Vector[0, 0], y_true=Vector[0]),
-        Sample(x=Vector[0, 1], y_true=Vector[0]),
-        Sample(x=Vector[1, 0], y_true=Vector[0]),
-        Sample(x=Vector[1, 1], y_true=Vector[1])
+        NetSample(x=Vector[0, 0], y_true=Vector[0]),
+        NetSample(x=Vector[0, 1], y_true=Vector[0]),
+        NetSample(x=Vector[1, 0], y_true=Vector[0]),
+        NetSample(x=Vector[1, 1], y_true=Vector[1])
     ]
 
 def sigmoid_numpy(z: np.ndarray) -> np.ndarray:
@@ -24,7 +24,7 @@ def fCorte(W1: np.ndarray, W2: np.ndarray, x1: float, x2: float,
     sobre toda la malla (w1, w2) a la vez."""
     return factivacion(x1 * W1 + x2 * W2 + k)
 
-def calcular_sabanas(dataset: list[Sample], b: float,
+def calcular_sabanas(dataset: list[NetSample], b: float,
                       rango_min: float, rango_max: float,
                       n: int = 80) -> tuple[np.ndarray, np.ndarray, list[np.ndarray], np.ndarray]:
     """Devuelve (w1_vals, w2_vals, sabanas_individuales, sabana_promedio)."""
@@ -43,7 +43,7 @@ def calcular_sabanas(dataset: list[Sample], b: float,
     Z_promedio = sum(sabanas) / len(sabanas)
     return w1_vals, w2_vals, sabanas, Z_promedio
 
-def figura_cortes_superpuestos(dataset: list[Sample], b: float,
+def figura_cortes_superpuestos(dataset: list[NetSample], b: float,
                                 rango_min: float = -6, rango_max: float = 18,
                                 n: int = 80) -> go.Figure:
     """Los 4 cortes por dato + el promedio, superpuestos en el mismo (w1, w2, perdida)."""

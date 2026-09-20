@@ -150,7 +150,7 @@ class Matrix:
         return hash(self.__rows)
 
 @dataclass
-class Sample:
+class NetSample:
     x: Vector
     y_true: Vector
 

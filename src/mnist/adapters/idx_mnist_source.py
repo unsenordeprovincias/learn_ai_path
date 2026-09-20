@@ -1,5 +1,5 @@
 import struct
-from mnist.domain.models import Sample, Vector
+from mnist.domain.models import NetSample, Vector
 from mnist.ports.sample_source import SampleSource
 from typing import Iterator
 
@@ -86,11 +86,11 @@ class IdxMnistSource(SampleSource):
                 f"({lbl_dims[0]} labels) implies {expected_labels}: truncated or corrupt file"
             )
 
-    def load(self) -> Iterator[Sample]:
+    def load(self) -> Iterator[NetSample]:
         images_generator = parse_idx_images(self.images_source)
         labels_generator = parse_idx_labels(self.labels_source)
 
         for pixels, label in zip(images_generator, labels_generator):
             pixels = [pixel / 255 for pixel in pixels]
             
-            yield Sample(Vector(pixels), Vector.one_hot(label, 10))
+            yield NetSample(Vector(pixels), Vector.one_hot(label, 10))

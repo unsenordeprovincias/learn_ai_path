@@ -7,6 +7,7 @@ import pytest
 import mnist.adapters.idx_raw_sample_sequence as adaptador
 from mnist.adapters.idx_raw_sample_sequence import IdxRawSampleSequence
 from tests.idx_files import write_idx
+from tests.open_spy import spy_on_open
 
 
 # ---------- validaciones al abrir ----------
@@ -122,19 +123,7 @@ def test_un_fichero_gz_se_rechaza_por_su_magic(tmp_path, roto):
 # ---------- si algo falla al abrir, no queda ningun fichero abierto ----------
 
 def _espiar_open(monkeypatch):
-    """Sustituye el `open` del adaptador por un espia que deja pasar la llamada real.
-
-    Devuelve la lista, que se va llenando, de los ficheros que el adaptador abrio.
-    """
-    abiertos = []
-
-    def espia(*args, **kwargs):
-        fichero = open(*args, **kwargs)  # aqui `open` es el de builtins: el parche es del adaptador
-        abiertos.append(fichero)
-        return fichero
-
-    monkeypatch.setattr(adaptador, "open", espia, raising=False)
-    return abiertos
+    return spy_on_open(monkeypatch, adaptador)
 
 
 def test_si_falla_la_cabecera_del_segundo_fichero_no_queda_ninguno_abierto(tmp_path, monkeypatch):

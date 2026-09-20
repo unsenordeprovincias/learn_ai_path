@@ -13,9 +13,11 @@ from typing import Callable, ContextManager, Iterator
 
 import pytest
 
+from mnist.adapters.csv_raw_sample_sequence import CsvRawSampleSequence
 from mnist.adapters.idx_raw_sample_sequence import IdxRawSampleSequence
 from mnist.domain.samples import RawSample
 from mnist.ports.raw_sample_sequence import RawSampleSequence
+from tests.csv_files import write_csv
 from tests.idx_files import write_idx
 from tests.in_memory_raw_sample_sequence import InMemoryRawSampleSequence
 
@@ -36,6 +38,15 @@ def _idx_seek_read(
 
 
 @contextmanager
+def _csv(
+    tmp_path: Path, images: list[bytes], labels: list[bytes], x_shape: tuple[int, ...]
+) -> Iterator[RawSampleSequence]:
+    path = write_csv(tmp_path, "data.csv", images, labels)
+    with CsvRawSampleSequence(path, x_shape) as sequence:
+        yield sequence
+
+
+@contextmanager
 def _in_memory(
     tmp_path: Path, images: list[bytes], labels: list[bytes], x_shape: tuple[int, ...]
 ) -> Iterator[RawSampleSequence]:
@@ -46,6 +57,7 @@ def _in_memory(
 
 ADAPTERS = {
     "idx-seek+read": _idx_seek_read,
+    "csv": _csv,
     "in-memory": _in_memory,
 }
 

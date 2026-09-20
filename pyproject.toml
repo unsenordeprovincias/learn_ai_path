@@ -9,9 +9,6 @@ description = "learning path from mnist"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pydantic>=2.0",
-    "pydantic-settings",
-    "python-dotenv",
     "pywebview",
     "numpy",
     "plotly",

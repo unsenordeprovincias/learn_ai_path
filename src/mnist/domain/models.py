@@ -4,12 +4,36 @@ from functools import reduce
 from dataclasses import dataclass
 
 class Vector:
+    # Sin __dict__ no se pueden anadir atributos; con __setattr__/__delattr__ cerrados
+    # tampoco se puede reemplazar __values. Es inmutabilidad "por contrato", como la de
+    # un dataclass frozen: object.__setattr__ sigue pudiendo saltarsela, y no pretendemos
+    # frenar a quien lo haga a proposito, sino errores por accidente.
+    __slots__ = ("__values",)
+    __values: tuple[float, ...]
+
     def __init__(self, values: Iterable[float]):
+        # Se materializa antes de validar: un generador solo se recorre una vez, y si el
+        # bucle de validacion lo consume, tuple(values) despues devolveria un Vector vacio.
+        values = tuple(values)
         for ix, item in enumerate(values):
             if not isinstance(item, (int, float)):
                 raise TypeError(f"Item {ix}, value = {item}, type = '{type(item).__name__}' must be float")
-        self.__values = tuple(values)
+        # object.__setattr__ salta nuestro __setattr__ cerrado; el nombre va ya "mangled".
+        object.__setattr__(self, "_Vector__values", values)
 
+    def __setattr__(self, name, value):
+        raise AttributeError(f"'{type(self).__name__}' is immutable: cannot set '{name}'")
+
+    def __delattr__(self, name):
+        raise AttributeError(f"'{type(self).__name__}' is immutable: cannot delete '{name}'")
+
+    # copy y pickle restauran el estado con setattr, que aqui esta cerrado: se les dice
+    # que reconstruyan el Vector llamando al constructor.
+    def __reduce__(self):
+        return (type(self), (self.__values,))
+
+    # mypy lee Vector[...] como una aplicacion de tipo generico y lo rechaza (una metaclase
+    # con __getitem__ tampoco lo arregla), asi que cada uso lleva `# type: ignore[misc]`.
     @classmethod
     def __class_getitem__(cls, args):
         if not isinstance(args, tuple):
@@ -28,6 +52,8 @@ class Vector:
 
     @classmethod
     def one_hot(cls, pos: int, length: int):
+        if pos < 0 or pos >= length:
+            raise ValueError(f"one_hot position {pos} is out of range for length {length}")
         return cls([1.0 if i == pos else 0.0 for i in range(length)])
     
     @property
@@ -54,6 +80,9 @@ class Vector:
     def __eq__(self, value):
         return isinstance(value, type(self)) and self.values == value.values
 
+    def __hash__(self):
+        return hash(self.__values)
+
     def __add__(self, other: "Vector"):
         self.__is_correct_type(other, "+", Vector)
         self.__are_same_length(other)
@@ -79,6 +108,9 @@ class Vector:
         return self.__mul__(other)
 
     def __matmul__(self, other: "Vector"):
+        if isinstance(other, Matrix):
+            return NotImplemented  # deja que Python intente Vector.__rmatmul__
+        
         self.__is_correct_type(other, "@", Vector)
         if len(self) != len(other):
             raise ValueError(
@@ -91,14 +123,14 @@ class Vector:
         return f"Vector {self.values}"
 
 class Matrix:
-    def __init__(self, rows: Iterable[Iterable[float]]):
-        rows = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
-        if rows and any(len(row) != len(rows[0]) for row in rows):
+    def __init__(self, rows: Iterable[Vector | Iterable[float]]):
+        vectors = tuple(row if isinstance(row, Vector) else Vector(row) for row in rows)
+        if vectors and any(len(row) != len(vectors[0]) for row in vectors):
             raise ValueError(
                 f"all rows must have the same length, got lengths "
-                f"{tuple(len(row) for row in rows)}"
+                f"{tuple(len(row) for row in vectors)}"
             )
-        self.__rows = rows
+        self.__rows = vectors
 
     @property
     def rows(self):
@@ -125,20 +157,34 @@ class Matrix:
             )
         return Vector([row @ other for row in self.__rows])
 
+    def __rmatmul__(self, other: "Vector") -> "Vector":
+        # se invoca cuando: other(Vector) @ self(Matrix)
+        # y Vector.__matmul__ devolvió NotImplemented
+        return self.T @ other
+
+    def __getitem__(self, key):
+        return self.__rows[key]
+
     def __repr__(self):
         return f"Matrix {tuple(row.values for row in self.__rows)}"
 
-@dataclass
-class Sample:
-    x: Vector
-    y_true: Vector
+    def __eq__(self, other):
+        return isinstance(other, Matrix) and self.__rows == other.rows
+
+    def __hash__(self):
+        return hash(self.__rows)
 
 @dataclass
-class Cache:
+class PerceptronCache:
     input_signal: Vector
-    output_signal: float
     weighted_sum: float
     weights: Vector
+
+@dataclass
+class LayerCache:
+    input_signal: Vector
+    weighted_sum: Vector     # el vector reunido de todos los perceptrones
+    output_signal: Vector    # ya activado, resultado de f_activation sobre weighted_sum
 
 @dataclass
 class CachedGradient:
@@ -146,56 +192,48 @@ class CachedGradient:
     bias: float
 
 class Perceptron:
-    def __init__(self, length: int, fActivation: Callable[[float], float]):
-        self.weights = Vector.initialize(length)
+    def __init__(self, inputs_length: int):
+        self.weights = Vector.initialize(inputs_length)
         self.bias = random()
-        self.f_activation = fActivation
-        self.cache: Cache = None
-        self.cached_gradient: CachedGradient = None
+        self.cache: PerceptronCache | None = None
+        self.cached_gradient: CachedGradient | None = None
 
     def weighted_sum(self, input_signal: Vector) -> float:
         return self.weights @ input_signal + self.bias
 
     def output(self, input_signal: Vector) -> float:
         weighted_sum = self.weighted_sum(input_signal) 
-        output_signal = self.f_activation(weighted_sum)
-        self.cache = Cache(
+        self.cache = PerceptronCache(
             input_signal = input_signal, 
-            output_signal = output_signal, 
             weighted_sum = weighted_sum,
             weights = Vector(self.weights.values)
         )
-        return output_signal
+        return weighted_sum
 
     def correct(self, learning_rate: float):
         if not learning_rate:
             return
+        assert self.cached_gradient is not None, "backward must compute the gradient before correct"
         self.weights += (-learning_rate * self.cached_gradient.weights)
         self.bias += (-learning_rate * self.cached_gradient.bias)
 
     def __repr__(self):
-        return (
-            f"Perceptron(inputs={len(self.weights)}, "
-            f"bias={self.bias:.4f}, "
-            f"activation={self.f_activation.__class__.__name__})"
-        )
+        return f"Perceptron(inputs={len(self.weights)}, bias={self.bias:.4f})"
 
 class Layer:
-    def __init__(self, inputs: int, output: int, fActivation: Callable = None):
-        self.__f_activation = (lambda x: 0 if x < 0 else x) if fActivation is None else fActivation
+    def __init__(self, inputs: int, output: int, fActivation: Callable):
+        self.__f_activation = fActivation
 
-        self.perceptrons = [Perceptron(inputs, self.__f_activation) for _ in range(output)]
-        self.cache = None
+        self.perceptrons = [Perceptron(inputs) for _ in range(output)]
+        self.cache: LayerCache | None = None
 
 
     def output(self, _input: Vector) -> Vector:
-        result = [perceptron.output(_input) for perceptron in self.perceptrons]
-        weighted_sums = [perceptron.cache.weighted_sum for perceptron in self.perceptrons]
-        self.cache = Cache(
+        weighted_sums = Vector([perceptron.output(_input) for perceptron in self.perceptrons])
+        self.cache = LayerCache(
             input_signal = _input,
-            weighted_sum=Vector[*weighted_sums],
-            output_signal=Vector[*result],
-            weights=None
+            weighted_sum=weighted_sums,
+            output_signal=self.f_activation(weighted_sums),
         )
 
         return self.cache.output_signal
@@ -216,11 +254,9 @@ class Layer:
             f"Layer(inputs={inputs}, outputs={len(self.perceptrons)}, "
             f"activation={self.__f_activation.__class__.__name__})"
         )
-
-
         
 class NeuralNet:
-    def __init__(self, layers: list[Layer], floss: Callable = None):
+    def __init__(self, layers: list[Layer], floss: Callable | None = None):
         self.__layers = layers
         self.__num_perceptrons = 0
         self.__floss = floss
@@ -277,9 +313,14 @@ class NeuralNet:
             activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
             local_error = loss_grad @ activation_sensivities
             '''
+            jacobian = layer.f_activation.derivative(layer.cache.weighted_sum)
+            # Con J[i][j] = da_i/dz_j, la regla de la cadena da dL/dz_j = sum_i g_i * J[i][j],
+            # es decir J^T g, que se escribe g @ J. El orden importa: solo con un Jacobiano
+            # simetrico (diagonal, softmax) J g y J^T g coinciden.
+            delta = loss_grad @ jacobian
+
             for pos_in_input, perceptron in enumerate(layer):
-                activation_sensivity = layer.f_activation.derivative(perceptron.cache.weighted_sum)
-                local_error = loss_grad[pos_in_input] * activation_sensivity
+                local_error = delta[pos_in_input]
                 # diagnosis y grabacion
                 weight_grad = local_error * layer.cache.input_signal 
                 bias_grad = local_error
@@ -293,11 +334,8 @@ class NeuralNet:
                 perceptron.correct(learning_rate)
 
             # Propaga loss_grad segun la regla de la cadena a siguiente capa
-            if ix_layer < len(self.layers):
-                activation_sensivities = Vector(tuple(map(layer.f_activation.derivative, layer.cache.weighted_sum)))
-                local_error = loss_grad * activation_sensivities
-
+            if ix_layer < len(self.layers) - 1:
                 W_transposed = Matrix([perceptron.cache.weights for perceptron in layer]).T
-                loss_grad = W_transposed @ local_error
+                loss_grad = W_transposed @ delta
                 
 

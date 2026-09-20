@@ -9,7 +9,7 @@ def test_create_window():
             window.destroy()
 
     window = webview.create_window('Test', html='<html><body>Hola, mundo</body></html>')
-    result = {}
-    webview.start(verify, window)
+    result: dict[str, str] = {}
+    webview.start(verify, window)  # type: ignore[arg-type]
 
     assert result['text'] == 'Hola, mundo'

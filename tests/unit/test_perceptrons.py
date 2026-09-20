@@ -11,7 +11,7 @@ init_bias = random.random()
 @pytest.fixture
 def perceptron():
     random.seed(5)
-    return Perceptron(PARAMS, relu) 
+    return Perceptron(PARAMS) 
 
 def test_create_perceptron(perceptron):
     weights = perceptron.weights
@@ -19,7 +19,6 @@ def test_create_perceptron(perceptron):
 
     assert weights.values == init_values
     assert bias == init_bias
-    assert perceptron.f_activation == relu
 
 def test_ponderated_sum(perceptron):
 
@@ -31,20 +30,16 @@ def test_ponderated_sum(perceptron):
 def test_output(perceptron):
     input_signal = Vector([1] * PARAMS)
     weighted_sum = perceptron.weighted_sum(input_signal)
-    output_signal = 0 if weighted_sum < 0 else weighted_sum
+    weights = perceptron.weights
 
-    assert output_signal == perceptron.output(input_signal)
+    assert weighted_sum == perceptron.output(input_signal)
     assert perceptron.cache.input_signal == input_signal
     assert perceptron.cache.weighted_sum == weighted_sum
-    assert perceptron.cache.output_signal == output_signal
+    assert perceptron.cache.weights == weights
 
 
 def test_str_perceptron(perceptron):
-    expected = (
-        f"Perceptron(inputs={PARAMS}, "
-        f"bias={perceptron.bias:.4f}, "
-        f"activation={perceptron.f_activation.__class__.__name__})"
-    )
+    expected = f"Perceptron(inputs={PARAMS}, bias={perceptron.bias:.4f})"
     assert repr(perceptron) == expected
 
 def test_correct_perceptron(perceptron):

@@ -1,5 +1,7 @@
 from mnist.domain.models import Vector
 import pytest
+import copy
+import pickle
 import random
 
 def test_create_vector():
@@ -146,3 +148,35 @@ def test_vector_can_be_used_as_dict_key_and_in_sets():
 
     assert {v: "a"}[Vector([1, 2])] == "a"
     assert len({v, Vector([1, 2]), Vector([2, 1])}) == 2
+
+
+def test_vector_rejects_attribute_assignment_after_construction():
+    v = Vector([1, 2])
+
+    with pytest.raises(AttributeError):
+        v.values = (9,)  # type: ignore[misc]  # es una property sin setter
+
+    with pytest.raises(AttributeError):
+        v.nuevo = 1
+
+    assert v == Vector([1, 2])
+
+
+def test_vector_values_cannot_be_replaced_through_the_private_name():
+    v = Vector([1, 2])
+
+    # el name mangling solo esconde el nombre; esto comprueba que ademas se rechaza
+    with pytest.raises(AttributeError):
+        setattr(v, "_Vector__values", (9,))
+
+    with pytest.raises(AttributeError):
+        delattr(v, "_Vector__values")
+
+    assert v == Vector([1, 2])
+
+
+def test_vector_survives_deepcopy_and_pickle():
+    v = Vector([1, 2, 3])
+
+    assert copy.deepcopy(v) == v
+    assert pickle.loads(pickle.dumps(v)) == v

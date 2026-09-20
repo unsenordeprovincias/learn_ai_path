@@ -4,11 +4,30 @@ from functools import reduce
 from dataclasses import dataclass
 
 class Vector:
+    # Sin __dict__ no se pueden anadir atributos; con __setattr__/__delattr__ cerrados
+    # tampoco se puede reemplazar __values. Es inmutabilidad "por contrato", como la de
+    # un dataclass frozen: object.__setattr__ sigue pudiendo saltarsela, y no pretendemos
+    # frenar a quien lo haga a proposito, sino errores por accidente.
+    __slots__ = ("__values",)
+    __values: tuple[float, ...]
+
     def __init__(self, values: Iterable[float]):
         for ix, item in enumerate(values):
             if not isinstance(item, (int, float)):
                 raise TypeError(f"Item {ix}, value = {item}, type = '{type(item).__name__}' must be float")
-        self.__values = tuple(values)
+        # object.__setattr__ salta nuestro __setattr__ cerrado; el nombre va ya "mangled".
+        object.__setattr__(self, "_Vector__values", tuple(values))
+
+    def __setattr__(self, name, value):
+        raise AttributeError(f"'{type(self).__name__}' is immutable: cannot set '{name}'")
+
+    def __delattr__(self, name):
+        raise AttributeError(f"'{type(self).__name__}' is immutable: cannot delete '{name}'")
+
+    # copy y pickle restauran el estado con setattr, que aqui esta cerrado: se les dice
+    # que reconstruyan el Vector llamando al constructor.
+    def __reduce__(self):
+        return (type(self), (self.__values,))
 
     # mypy lee Vector[...] como una aplicacion de tipo generico y lo rechaza (una metaclase
     # con __getitem__ tampoco lo arregla), asi que cada uso lleva `# type: ignore[misc]`.

@@ -8,3 +8,12 @@ def test_len_sale_del_n_de_la_cabecera_de_etiquetas(tmp_path):
     labels = write_idx(tmp_path, "labels", dims=(256,))
 
     assert len(IdxRawSampleSequence(images, labels)) == 256
+
+
+def test_x_shape_sale_de_la_cabecera_de_imagenes_sin_el_n(tmp_path):
+    # las tres dimensiones son distintas para que un orden equivocado o un recorte
+    # mal hecho de dims no pase por casualidad
+    images = write_idx(tmp_path, "images", dims=(2, 3, 40))
+    labels = write_idx(tmp_path, "labels", dims=(2,))
+
+    assert IdxRawSampleSequence(images, labels).x_shape == (3, 40)

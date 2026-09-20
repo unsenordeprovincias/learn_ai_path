@@ -180,3 +180,13 @@ def test_vector_survives_deepcopy_and_pickle():
 
     assert copy.deepcopy(v) == v
     assert pickle.loads(pickle.dumps(v)) == v
+
+
+def test_vector_built_from_a_generator_keeps_its_values():
+    assert Vector(x for x in [1, 2, 3]) == Vector([1, 2, 3])
+    assert len(Vector(iter([1, 2, 3]))) == 3
+
+
+def test_vector_built_from_a_generator_is_still_validated():
+    with pytest.raises(TypeError):
+        Vector(x for x in [1, "a", 3])  # type: ignore[misc]  # tipo invalido a proposito

@@ -12,11 +12,14 @@ class Vector:
     __values: tuple[float, ...]
 
     def __init__(self, values: Iterable[float]):
+        # Se materializa antes de validar: un generador solo se recorre una vez, y si el
+        # bucle de validacion lo consume, tuple(values) despues devolveria un Vector vacio.
+        values = tuple(values)
         for ix, item in enumerate(values):
             if not isinstance(item, (int, float)):
                 raise TypeError(f"Item {ix}, value = {item}, type = '{type(item).__name__}' must be float")
         # object.__setattr__ salta nuestro __setattr__ cerrado; el nombre va ya "mangled".
-        object.__setattr__(self, "_Vector__values", tuple(values))
+        object.__setattr__(self, "_Vector__values", values)
 
     def __setattr__(self, name, value):
         raise AttributeError(f"'{type(self).__name__}' is immutable: cannot set '{name}'")

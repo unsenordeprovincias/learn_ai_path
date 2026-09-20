@@ -127,3 +127,9 @@ def test_one_hot():
     assert Vector.one_hot(0, 3) == Vector[1, 0, 0]  # type: ignore[misc]
     assert Vector.one_hot(1, 3) == Vector[0, 1, 0]  # type: ignore[misc]
     assert Vector.one_hot(2, 3) == Vector[0, 0, 1]  # type: ignore[misc]
+
+    with pytest.raises(ValueError):
+        Vector.one_hot(10, 10)
+
+    with pytest.raises(ValueError):
+        Vector.one_hot(-1, 10)

@@ -30,6 +30,8 @@ class Vector:
 
     @classmethod
     def one_hot(cls, pos: int, length: int):
+        if pos < 0 or pos >= length:
+            raise ValueError(f"one_hot position {pos} is out of range for length {length}")
         return cls([1.0 if i == pos else 0.0 for i in range(length)])
     
     @property

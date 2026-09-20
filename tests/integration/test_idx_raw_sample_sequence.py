@@ -5,6 +5,7 @@ import math
 import pytest
 
 from mnist.adapters.idx_raw_sample_sequence import IdxRawSampleSequence
+from mnist.domain.samples import RawSample
 from tests.idx_files import write_idx
 
 
@@ -133,3 +134,64 @@ def test_un_fichero_gz_se_rechaza_por_su_magic(tmp_path, roto):
 
     with pytest.raises(ValueError, match="0x1f8b0808"):
         IdxRawSampleSequence(images, labels)
+
+
+# ---------- acceso por posicion: x[i] ----------
+
+def _par_distinguible(tmp_path):
+    """N=3 e imagenes (2, 4): ningun byte de imagen se repite entre registros.
+
+    Asi un desplazamiento mal calculado devuelve bytes de otro registro y se nota.
+    """
+    n, x_shape = 3, (2, 4)
+    tamano = math.prod(x_shape)
+    imagenes = [bytes(k * tamano + j for j in range(tamano)) for k in range(n)]
+    etiquetas = [bytes([5]), bytes([0]), bytes([9])]
+    images = write_idx(tmp_path, "images", dims=(n, *x_shape), content=b"".join(imagenes))
+    labels = write_idx(tmp_path, "labels", dims=(n,), content=b"".join(etiquetas))
+    return images, labels, imagenes, etiquetas
+
+
+def test_x_de_i_devuelve_el_registro_i_como_raw_sample(tmp_path):
+    images, labels, imagenes, etiquetas = _par_distinguible(tmp_path)
+
+    sample = IdxRawSampleSequence(images, labels)[1]
+
+    assert sample == RawSample(x=imagenes[1], y_true=etiquetas[1])
+
+
+def test_cada_x_de_i_empareja_la_imagen_i_con_la_etiqueta_i(tmp_path):
+    images, labels, imagenes, etiquetas = _par_distinguible(tmp_path)
+    sequence = IdxRawSampleSequence(images, labels)
+
+    esperado = [RawSample(x=im, y_true=et) for im, et in zip(imagenes, etiquetas)]
+    assert [sequence[i] for i in range(len(sequence))] == esperado
+
+
+def test_los_bordes_0_y_n_menos_1_son_validos(tmp_path):
+    images, labels, imagenes, etiquetas = _par_distinguible(tmp_path)
+    sequence = IdxRawSampleSequence(images, labels)
+
+    assert sequence[0] == RawSample(x=imagenes[0], y_true=etiquetas[0])
+    assert sequence[len(sequence) - 1] == RawSample(x=imagenes[-1], y_true=etiquetas[-1])
+
+
+@pytest.mark.parametrize("i", [-1, -3, 3, 4], ids=["-1", "-n", "n", "n+1"])
+def test_indice_fuera_de_0_n_lanza_index_error_negativos_incluidos(tmp_path, i):
+    # n = 3. -1 y -n serian validos en una secuencia de Python; aqui no, a proposito
+    images, labels, _, _ = _par_distinguible(tmp_path)
+
+    with pytest.raises(IndexError):
+        IdxRawSampleSequence(images, labels)[i]
+
+
+def test_leer_la_misma_posicion_dos_veces_da_lo_mismo_aunque_haya_otras_lecturas_en_medio(tmp_path):
+    # el fichero tiene un puntero de lectura; x[i] no puede depender de donde quedo
+    images, labels, imagenes, etiquetas = _par_distinguible(tmp_path)
+    sequence = IdxRawSampleSequence(images, labels)
+
+    primera = sequence[2]
+    sequence[0]
+    segunda = sequence[2]
+
+    assert primera == segunda == RawSample(x=imagenes[2], y_true=etiquetas[2])

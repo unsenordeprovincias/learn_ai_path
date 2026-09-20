@@ -1,6 +1,9 @@
 import math
+import os
 import struct
 from pathlib import Path
+
+from mnist.domain.samples import RawSample
 
 _IMAGES_NDIMS = 3  # el ndims esperado viene de fuera del fichero: 3 para imagenes
 _LABELS_NDIMS = 1  # y 1 para etiquetas
@@ -21,41 +24,45 @@ def _read_header_part(file, size: int, path: Path) -> bytes:
     return part
 
 
-def _read_dims(path: Path, expected_ndims: int) -> list[int]:
-    with open(path, "rb") as file:
-        (magic,) = struct.unpack(">I", _read_header_part(file, 4, path))
-        if magic >> 16:
-            raise ValueError(f"{path}: IDX magic must start with two zero bytes, got {magic:#010x}")
-        data_type = (magic >> 8) & 0xFF
-        if data_type not in _ELEMENT_SIZE_BY_TYPE:
-            supported = ", ".join(f"{t:#04x}" for t in _ELEMENT_SIZE_BY_TYPE)
-            raise ValueError(
-                f"{path}: unsupported IDX data type {data_type:#04x}, supported: {supported}"
-            )
-        ndims = magic & 0xFF
-        if ndims != expected_ndims:
-            raise ValueError(
-                f"{path}: expected {expected_ndims} dimension(s), the magic declares {ndims}"
-            )
-        dims = list(struct.unpack(f">{ndims}I", _read_header_part(file, 4 * ndims, path)))
+def _read_dims(file, path: Path, expected_ndims: int) -> tuple[list[int], int]:
+    """Valida la cabecera del fichero abierto y devuelve (dims, tamano de registro)."""
+    (magic,) = struct.unpack(">I", _read_header_part(file, 4, path))
+    if magic >> 16:
+        raise ValueError(f"{path}: IDX magic must start with two zero bytes, got {magic:#010x}")
+    data_type = (magic >> 8) & 0xFF
+    if data_type not in _ELEMENT_SIZE_BY_TYPE:
+        supported = ", ".join(f"{t:#04x}" for t in _ELEMENT_SIZE_BY_TYPE)
+        raise ValueError(
+            f"{path}: unsupported IDX data type {data_type:#04x}, supported: {supported}"
+        )
+    ndims = magic & 0xFF
+    if ndims != expected_ndims:
+        raise ValueError(
+            f"{path}: expected {expected_ndims} dimension(s), the magic declares {ndims}"
+        )
+    dims = list(struct.unpack(f">{ndims}I", _read_header_part(file, 4 * ndims, path)))
 
     # Las dimensiones salen de un fichero que aun no sabemos si es fiable: se contrastan
     # con el tamano real antes de que nada las use para posicionarse.
     record_size = math.prod(dims[1:]) * _ELEMENT_SIZE_BY_TYPE[data_type]
     expected_size = 4 + 4 * ndims + dims[0] * record_size
-    actual_size = path.stat().st_size
+    actual_size = os.fstat(file.fileno()).st_size
     if actual_size != expected_size:
         raise ValueError(
             f"{path}: the file has {actual_size} bytes but its header implies {expected_size}: "
             "truncated or with extra bytes"
         )
-    return dims
+    return dims, record_size
 
 
 class IdxRawSampleSequence:
     def __init__(self, images_path: Path, labels_path: Path):
-        images_n, *x_shape = _read_dims(images_path, _IMAGES_NDIMS)
-        (labels_n,) = _read_dims(labels_path, _LABELS_NDIMS)
+        self._images = open(images_path, "rb")
+        self._labels = open(labels_path, "rb")
+        images_dims, self._images_record_size = _read_dims(self._images, images_path, _IMAGES_NDIMS)
+        labels_dims, self._labels_record_size = _read_dims(self._labels, labels_path, _LABELS_NDIMS)
+        images_n, *x_shape = images_dims
+        (labels_n,) = labels_dims
         if images_n != labels_n:
             raise ValueError(
                 f"the number of samples differs: {images_path} has {images_n}, "
@@ -70,3 +77,14 @@ class IdxRawSampleSequence:
     @property
     def x_shape(self) -> tuple[int, ...]:
         return self._x_shape
+
+    def __getitem__(self, i: int) -> RawSample:
+        if not 0 <= i < self._n:
+            raise IndexError(f"sample index {i} is out of range for {self._n} samples")
+        # Cada registro esta en cabecera + i * tamano_de_registro; la cabecera mide
+        # 4 bytes de magic mas 4 por dimension.
+        self._images.seek(4 + 4 * _IMAGES_NDIMS + i * self._images_record_size)
+        x = self._images.read(self._images_record_size)
+        self._labels.seek(4 + 4 * _LABELS_NDIMS + i * self._labels_record_size)
+        y_true = self._labels.read(self._labels_record_size)
+        return RawSample(x=x, y_true=y_true)

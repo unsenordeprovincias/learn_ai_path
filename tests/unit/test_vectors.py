@@ -133,3 +133,16 @@ def test_one_hot():
 
     with pytest.raises(ValueError):
         Vector.one_hot(-1, 10)
+
+def test_equal_vectors_have_the_same_hash():
+    assert hash(Vector([1, 2, 3])) == hash(Vector.from_values(1, 2, 3))
+    # 1 == 1.0, y por eso deben hashear igual: hash y eq tienen que ser coherentes
+    assert Vector([1, 2]) == Vector([1.0, 2.0])
+    assert hash(Vector([1, 2])) == hash(Vector([1.0, 2.0]))
+
+
+def test_vector_can_be_used_as_dict_key_and_in_sets():
+    v = Vector([1, 2])
+
+    assert {v: "a"}[Vector([1, 2])] == "a"
+    assert len({v, Vector([1, 2]), Vector([2, 1])}) == 2

@@ -58,6 +58,9 @@ class Vector:
     def __eq__(self, value):
         return isinstance(value, type(self)) and self.values == value.values
 
+    def __hash__(self):
+        return hash(self.__values)
+
     def __add__(self, other: "Vector"):
         self.__is_correct_type(other, "+", Vector)
         self.__are_same_length(other)

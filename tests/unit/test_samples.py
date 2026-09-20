@@ -22,3 +22,10 @@ def test_net_sample_es_inmutable():
 
     with pytest.raises(FrozenInstanceError):
         sample.y_true = Vector[0]  # type: ignore[misc]
+
+
+def test_net_sample_es_hashable():
+    a = NetSample(x=Vector[0, 1], y_true=Vector[1])  # type: ignore[misc]
+    b = NetSample(x=Vector[0, 1], y_true=Vector[1])  # type: ignore[misc]
+
+    assert hash(a) == hash(b)

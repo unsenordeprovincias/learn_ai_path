@@ -62,3 +62,7 @@ def test_transpose():
 def test_transpose_twice_returns_equivalent_matrix():
     m = Matrix([[1, 2, 3], [4, 5, 6]])
     assert m.T.T.rows == m.rows
+
+
+def test_equal_matrices_have_the_same_hash():
+    assert hash(Matrix([[1, 2], [3, 4]])) == hash(Matrix([[1, 2], [3, 4]]))

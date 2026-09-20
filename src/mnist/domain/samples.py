@@ -21,7 +21,9 @@ class RawSample:
 class NetSample:
     """Un par (x, y_true) ya transformado, listo para alimentar a la red.
 
-    El orden del par es el mismo que en RawSample: x primero, y_true despues.
+    El orden del par es el mismo que en RawSample: x primero, y_true despues. Hoy lo usan
+    los playgrounds; ningun codigo de src lo produce: pasar de RawSample a NetSample
+    (normalizar, one-hot) es cosa de quien consuma la secuencia.
     """
 
     x: Vector

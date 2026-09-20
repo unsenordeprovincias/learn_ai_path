@@ -1,6 +1,7 @@
 import math
 import os
 import struct
+from contextlib import ExitStack
 from pathlib import Path
 
 from mnist.domain.samples import RawSample
@@ -57,19 +58,26 @@ def _read_dims(file, path: Path, expected_ndims: int) -> tuple[list[int], int]:
 
 class IdxRawSampleSequence:
     def __init__(self, images_path: Path, labels_path: Path):
-        self._images = open(images_path, "rb")
-        self._labels = open(labels_path, "rb")
-        images_dims, self._images_record_size = _read_dims(self._images, images_path, _IMAGES_NDIMS)
-        labels_dims, self._labels_record_size = _read_dims(self._labels, labels_path, _LABELS_NDIMS)
-        images_n, *x_shape = images_dims
-        (labels_n,) = labels_dims
-        if images_n != labels_n:
-            raise ValueError(
-                f"the number of samples differs: {images_path} has {images_n}, "
-                f"{labels_path} has {labels_n}"
-            )
-        self._n = images_n
-        self._x_shape = tuple(x_shape)
+        # Si algo falla mientras se abre y valida, el `with` cierra lo que ya este abierto
+        # (uno o los dos ficheros). Si todo sale bien, pop_all() traspasa esa
+        # responsabilidad a self._stack y el `with` ya no cierra nada.
+        with ExitStack() as stack:
+            images = stack.enter_context(open(images_path, "rb"))
+            labels = stack.enter_context(open(labels_path, "rb"))
+            images_dims, self._images_record_size = _read_dims(images, images_path, _IMAGES_NDIMS)
+            labels_dims, self._labels_record_size = _read_dims(labels, labels_path, _LABELS_NDIMS)
+            images_n, *x_shape = images_dims
+            (labels_n,) = labels_dims
+            if images_n != labels_n:
+                raise ValueError(
+                    f"the number of samples differs: {images_path} has {images_n}, "
+                    f"{labels_path} has {labels_n}"
+                )
+            self._images = images
+            self._labels = labels
+            self._n = images_n
+            self._x_shape = tuple(x_shape)
+            self._stack = stack.pop_all()
 
     def __len__(self) -> int:
         return self._n

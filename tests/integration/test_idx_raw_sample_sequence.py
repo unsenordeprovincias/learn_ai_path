@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+import mnist.adapters.idx_raw_sample_sequence as adaptador
 from mnist.adapters.idx_raw_sample_sequence import IdxRawSampleSequence
 from mnist.domain.samples import RawSample
 from tests.idx_files import write_idx
@@ -195,3 +196,61 @@ def test_leer_la_misma_posicion_dos_veces_da_lo_mismo_aunque_haya_otras_lecturas
     segunda = sequence[2]
 
     assert primera == segunda == RawSample(x=imagenes[2], y_true=etiquetas[2])
+
+
+# ---------- si algo falla al abrir, no queda ningun fichero abierto ----------
+
+def _espiar_open(monkeypatch):
+    """Sustituye el `open` del adaptador por un espia que deja pasar la llamada real.
+
+    Devuelve la lista, que se va llenando, de los ficheros que el adaptador abrio.
+    """
+    abiertos = []
+
+    def espia(*args, **kwargs):
+        fichero = open(*args, **kwargs)  # aqui `open` es el de builtins: el parche es del adaptador
+        abiertos.append(fichero)
+        return fichero
+
+    monkeypatch.setattr(adaptador, "open", espia, raising=False)
+    return abiertos
+
+
+def test_si_falla_la_cabecera_del_segundo_fichero_no_queda_ninguno_abierto(tmp_path, monkeypatch):
+    images, labels = _par_valido(tmp_path)
+    contenido = bytearray(labels.read_bytes())
+    contenido[0] = 0xFF
+    labels.write_bytes(contenido)
+    abiertos = _espiar_open(monkeypatch)
+
+    with pytest.raises(ValueError, match="magic"):
+        IdxRawSampleSequence(images, labels)
+
+    # 2 = el espia si ve los ficheros; sin esto, "todos cerrados" pasaria en vacio
+    assert len(abiertos) == 2
+    assert all(fichero.closed for fichero in abiertos)
+
+
+def test_si_falla_tras_abrir_los_dos_ficheros_no_queda_ninguno_abierto(tmp_path, monkeypatch):
+    # cada fichero es valido por separado: solo discrepan en N, y eso se ve con los dos abiertos
+    images = write_idx(tmp_path, "images", dims=(3, 3, 40))
+    labels = write_idx(tmp_path, "labels", dims=(2,))
+    abiertos = _espiar_open(monkeypatch)
+
+    with pytest.raises(ValueError, match="differs"):
+        IdxRawSampleSequence(images, labels)
+
+    assert len(abiertos) == 2
+    assert all(fichero.closed for fichero in abiertos)
+
+
+def test_si_el_segundo_fichero_no_existe_el_primero_queda_cerrado(tmp_path, monkeypatch):
+    images, _ = _par_valido(tmp_path)
+    abiertos = _espiar_open(monkeypatch)
+
+    with pytest.raises(FileNotFoundError):
+        IdxRawSampleSequence(images, tmp_path / "no_existe")
+
+    # solo se llego a abrir el primero: la segunda apertura fue la que fallo
+    assert len(abiertos) == 1
+    assert abiertos[0].closed

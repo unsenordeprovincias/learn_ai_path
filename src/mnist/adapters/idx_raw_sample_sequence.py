@@ -79,6 +79,13 @@ class IdxRawSampleSequence:
             self._x_shape = tuple(x_shape)
             self._stack = stack.pop_all()
 
+    def __enter__(self) -> "IdxRawSampleSequence":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        # No devuelve True: si el cuerpo del `with` lanzo, esa excepcion sigue su camino.
+        self._stack.close()
+
     def __len__(self) -> int:
         return self._n
 

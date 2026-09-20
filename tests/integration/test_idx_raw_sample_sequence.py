@@ -254,3 +254,37 @@ def test_si_el_segundo_fichero_no_existe_el_primero_queda_cerrado(tmp_path, monk
     # solo se llego a abrir el primero: la segunda apertura fue la que fallo
     assert len(abiertos) == 1
     assert abiertos[0].closed
+
+
+# ---------- cierre con `with` ----------
+
+def test_enter_devuelve_el_propio_objeto(tmp_path):
+    images, labels = _par_valido(tmp_path)
+    sequence = IdxRawSampleSequence(images, labels)
+
+    with sequence as dentro:
+        assert dentro is sequence
+
+
+def test_al_salir_del_with_los_ficheros_quedan_cerrados(tmp_path, monkeypatch):
+    images, labels = _par_valido(tmp_path)
+    abiertos = _espiar_open(monkeypatch)
+
+    with IdxRawSampleSequence(images, labels) as sequence:
+        sequence[0]
+        assert not any(fichero.closed for fichero in abiertos)
+
+    assert len(abiertos) == 2
+    assert all(fichero.closed for fichero in abiertos)
+
+
+def test_los_ficheros_quedan_cerrados_aunque_el_cuerpo_del_with_lance(tmp_path, monkeypatch):
+    images, labels = _par_valido(tmp_path)
+    abiertos = _espiar_open(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="fallo del usuario"):
+        with IdxRawSampleSequence(images, labels):
+            raise RuntimeError("fallo del usuario")
+
+    assert len(abiertos) == 2
+    assert all(fichero.closed for fichero in abiertos)

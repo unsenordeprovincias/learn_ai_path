@@ -2,7 +2,8 @@
 import struct
 from itertools import islice
 from mnist.adapters.idx_mnist_source import IdxMnistSource
-from mnist.domain.models import NetSample, Vector
+from mnist.domain.models import Vector
+from mnist.domain.samples import NetSample
 import pytest
 
 

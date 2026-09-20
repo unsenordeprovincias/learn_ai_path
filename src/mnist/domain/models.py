@@ -150,11 +150,6 @@ class Matrix:
         return hash(self.__rows)
 
 @dataclass
-class NetSample:
-    x: Vector
-    y_true: Vector
-
-@dataclass
 class PerceptronCache:
     input_signal: Vector
     weighted_sum: float

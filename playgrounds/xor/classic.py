@@ -1,4 +1,5 @@
-from mnist.domain.models import NeuralNet, Layer, Vector, NetSample
+from mnist.domain.models import NeuralNet, Layer, Vector
+from mnist.domain.samples import NetSample
 from mnist.domain.functions import mse, sigmoid
 from random import choices
 

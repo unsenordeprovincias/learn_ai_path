@@ -1,5 +1,6 @@
 from mnist.domain.functions import mse, sigmoid
-from mnist.domain.models import NeuralNet, Layer, Vector, NetSample
+from mnist.domain.models import NeuralNet, Layer, Vector
+from mnist.domain.samples import NetSample
 import numpy as np
 import plotly.graph_objects as go
 from plotly.colors import sample_colorscale

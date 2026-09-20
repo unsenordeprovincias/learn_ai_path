@@ -1,5 +1,6 @@
 import struct
-from mnist.domain.models import NetSample, Vector
+from mnist.domain.models import Vector
+from mnist.domain.samples import NetSample
 from mnist.ports.sample_source import SampleSource
 from typing import Iterator
 

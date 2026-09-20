@@ -1,6 +1,6 @@
 # ports/sample_source.py
 from typing import Iterator, Protocol
-from mnist.domain.models import NetSample
+from mnist.domain.samples import NetSample
 
 
 class SampleSource(Protocol):
